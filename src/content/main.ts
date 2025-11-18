@@ -142,6 +142,19 @@ function clearEqualizer(audioElement: HTMLMediaElement) {
 
 
 
+function applyEQIfPlaying() {
+    console.log('applyEQIfPlaying');
+    const audios = document.querySelectorAll<HTMLMediaElement>('audio, video');
+    audios.forEach(audio => {
+        if (!audio.paused && !audio.ended && audio.readyState > 2) {
+            lastPlayedElement = audio;
+            if (eqEnabled) {
+                console.log('Applying EQ to currently playing element');
+                applyEqualizer(audio);
+            }
+        }
+    });
+}
 
 
 
@@ -163,6 +176,8 @@ chrome.storage.local.get(["eqEnabled", "selectedPreset"], data => {
 
     eqEnabled ? onEQEnabled() : onEQDisabled();
     updateEQBtnVisual();
+
+    applyEQIfPlaying();
 });
 
 // React to storage changes (all tabs update EQ automatically)

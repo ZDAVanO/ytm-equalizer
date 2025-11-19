@@ -189,7 +189,6 @@ waitForElem('#right-content.right-content.style-scope.ytmusic-nav-bar', (panel) 
     const btn = document.createElement("button");
     btn.className = "eq-toggle-btn";
     btn.innerHTML = `<img src="${eq_icon}" alt="EQ Icon">`;
-    // btn.style.order = '-1';
 
     btn.onclick = () => {
         chrome.runtime.sendMessage({ action: "open_popup" });

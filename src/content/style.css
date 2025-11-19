@@ -1,33 +1,43 @@
-
-
-
-
-
 .eq-toggle-btn {
     margin-right: 8px;
     /* padding: 8px; */
     border-radius: 8px;
     border: none;
-    /* background: #222; */
     background: transparent;
-    /* color: #fff; */
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s, box-shadow 0.2s;
     height: 32px;
-    /* width: 40px; */
-    width: 36px;
+    width: 40px;
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
+    
+    position: relative;
+    /* order: -1; */
 }
 
-.eq-toggle-btn.on {
-    /* background: rgba(29, 185, 84, 0.8); */
+/* .eq-toggle-btn.on {
     background: rgb(250, 72, 111, 0.8);
-    /* color: #fff; */
     box-shadow: 0 0 12px 4px rgba(250, 72, 111, 0.7), 0 0 2px 1px rgba(250, 72, 111, 0.5);
+} */
+
+.eq-toggle-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 100%;
+  background: radial-gradient(circle, rgba(250, 72, 111, 1), transparent 100%);
+  filter: blur(8px);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.eq-toggle-btn.on::before {
+  opacity: 1;
 }
 
 .eq-toggle-btn img {

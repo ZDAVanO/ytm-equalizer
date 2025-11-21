@@ -5,6 +5,7 @@ import { version } from '../../package.json';
 
 import defaultPresets, { FilterPreset, presetDisplayNames } from '../defaultPresets';
 import { filterTypes, filterTypeShort } from '../filterTypes';
+import { devLog } from '../utils';
 
 console.log('Popup script loaded');
 
@@ -292,7 +293,7 @@ deletePresetBtn.addEventListener("click", () => {
 
 // --- Load presets on startup ---
 chrome.storage.local.get("userPresets", data => {
-  console.log('Loaded userPresets from storage:', data.userPresets);
+  devLog('Loaded userPresets from storage:', data.userPresets);
   userPresets = Array.isArray(data.userPresets) ? data.userPresets : []
   updatePresetsSelector()
 
@@ -300,7 +301,7 @@ chrome.storage.local.get("userPresets", data => {
 
 chrome.storage.local.get("selectedPreset", data => {
   const name = typeof data.selectedPreset === "string" ? data.selectedPreset : defaultPresets[0].name
-  console.log('Loaded selectedPreset from storage:', name);
+  devLog('Loaded selectedPreset from storage:', name);
   presetsSelect.value = name
   setSlidersFromPreset(name)
   // Update delete button state on load
@@ -358,7 +359,7 @@ function getCurrentFiltersFromUI(): any[] {
 // MARK: updateCurrentFilters
 function updateCurrentFilters(filters?: any[]) {
   currentFilters = filters ?? getCurrentFiltersFromUI();
-  console.log('[updateCurrentFilters] Current preset:', currentFilters);
+  devLog('[updateCurrentFilters] Current preset:', currentFilters);
   chrome.storage.local.set({ currentFilters });
 }
 
@@ -369,7 +370,7 @@ function autosavePreset() {
   const name = presetsSelect.value;
 
   if (isUserPreset(name)) {
-    console.log('[autosavePreset] UserPreset');
+    devLog('[autosavePreset] UserPreset');
     const filters = getCurrentFiltersFromUI();
     const newPreset: FilterPreset = { name: name, filters };
 
@@ -381,7 +382,7 @@ function autosavePreset() {
   }
   
   if (isDefaultPreset(name)) {
-    console.log('[autosavePreset] DefaultPreset');
+    devLog('[autosavePreset] DefaultPreset');
     const filters = getCurrentFiltersFromUI();
     const customPreset: FilterPreset = { name: customPresetName, filters };
 

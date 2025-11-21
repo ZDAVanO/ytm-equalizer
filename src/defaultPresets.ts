@@ -88,36 +88,6 @@ const defaultPresets: FilterPreset[] = [
     ],
   },
   {
-    name: "bassBoosterPlus",
-    filters: [
-      { freq: 32, gain: 5.0, Q: 1.0, type: "peaking" },
-      { freq: 64, gain: 4.0, Q: 1.0, type: "peaking" },
-      { freq: 125, gain: 3.0, Q: 1.0, type: "peaking" },
-      { freq: 250, gain: 2.1, Q: 1.0, type: "peaking" },
-      { freq: 500, gain: 1.1, Q: 1.0, type: "peaking" },
-      { freq: 1000, gain: 0.0, Q: 1.0, type: "peaking" },
-      { freq: 2000, gain: 0.0, Q: 1.0, type: "peaking" },
-      { freq: 4000, gain: 0.0, Q: 1.0, type: "peaking" },
-      { freq: 8000, gain: 0.0, Q: 1.0, type: "peaking" },
-      { freq: 16000, gain: 0.0, Q: 1.0, type: "peaking" },
-    ],
-  },
-  {
-    name: "BassBoosterUltra",
-    filters: [
-      { freq: 32, gain: 12.0, Q: 1.0, type: "peaking" },
-      { freq: 64, gain: 12.0, Q: 1.0, type: "peaking" },
-      { freq: 125, gain: 12.0, Q: 1.0, type: "peaking" },
-      { freq: 250, gain: 12.0, Q: 1.0, type: "peaking" },
-      { freq: 500, gain: 12.0, Q: 1.0, type: "peaking" },
-      { freq: 1000, gain: -12.0, Q: 1.0, type: "peaking" },
-      { freq: 2000, gain: -12.0, Q: 1.0, type: "peaking" },
-      { freq: 4000, gain: -12.0, Q: 1.0, type: "peaking" },
-      { freq: 8000, gain: -12.0, Q: 1.0, type: "peaking" },
-      { freq: 16000, gain: -12.0, Q: 1.0, type: "peaking" },
-    ],
-  },
-  {
     name: "bassReducer",
     filters: [
       { freq: 32, gain: -6.2, Q: 1.0, type: "peaking" },

@@ -3,6 +3,8 @@ import { filterTypes } from '../filterTypes';
 import './style.css'
 import eq_icon from '@/assets/equalizer-svgrepo-com.svg'
 
+import { devLog } from '../utils';
+
 console.log('[content] YTM Equalizer Extension loaded');
 
 
@@ -16,7 +18,15 @@ let previousAudioSource: MediaElementAudioSourceNode | null = null;
 let lastPlayedElement: HTMLMediaElement | null = null;
 
 const FILTER_COUNT = 10;
-const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_COUNT }, () => audioContext.createBiquadFilter());
+// const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_COUNT }, () => audioContext.createBiquadFilter());
+const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_COUNT }, () => {
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'peaking';
+    filter.frequency.value = 0;
+    filter.Q.value = 1;
+    filter.gain.value = 0;
+    return filter;
+});
 
 let appliedFilters: BiquadFilterNode[] = [];
 
@@ -26,14 +36,14 @@ let appliedFilters: BiquadFilterNode[] = [];
 function waitForElem(selector: string, cb: (el: Element) => void) {
     const el = document.querySelector(selector);
     if (el) {
-        console.log(`[waitForElem] Found element: ${selector}`);
+        devLog(`[waitForElem] Found element: ${selector}`);
         return cb(el);
     }
     const obs = new MutationObserver(() => {
         const el = document.querySelector(selector);
         if (el) {
             obs.disconnect();
-            console.log(`[waitForElem] Found element via MutationObserver: ${selector}`);
+            devLog(`[waitForElem] Found element via MutationObserver: ${selector}`);
             cb(el);
         }
     });
@@ -57,26 +67,26 @@ function updateFilters(filters: any[]) {
 
 // MARK: applyEqualizer
 function applyEqualizer(ae_audioElement: HTMLMediaElement) {
-    console.log('[applyEqualizer]');
+    devLog('[applyEqualizer]');
 
     let audioSource: MediaElementAudioSourceNode;
 
     if (mediaElementSources.has(ae_audioElement)) {
-        console.log('MediaElementSourceNode already connected');
+        devLog('MediaElementSourceNode already connected');
         audioSource = mediaElementSources.get(ae_audioElement)!;
 
     } else {
-        console.log('MediaElementSourceNode not found, creating new one');
+        devLog('MediaElementSourceNode not found, creating new one');
         audioSource = audioContext.createMediaElementSource(ae_audioElement);
         mediaElementSources.set(ae_audioElement, audioSource); // save source to weakmap
     }
 
-    console.log('previousAudioSource', previousAudioSource);
+    devLog('previousAudioSource', previousAudioSource);
     if (previousAudioSource) {
         previousAudioSource.disconnect();
     }
 
-    console.log('mediaElementSources', mediaElementSources);
+    devLog('mediaElementSources', mediaElementSources);
 
 
     appliedFilters.forEach((filter) => filter.disconnect());
@@ -85,15 +95,15 @@ function applyEqualizer(ae_audioElement: HTMLMediaElement) {
 
     let currentNode: AudioNode = audioSource;
     for (const filter of equalizerFilters) {
-        // console.log('Connecting filter', filter);
+        // devLog('Connecting filter', filter);
         currentNode.connect(filter);
         appliedFilters.push(filter);
         currentNode = filter;
     }
-    console.log('appliedFilters', appliedFilters);
+    devLog('appliedFilters', appliedFilters);
     currentNode.connect(audioContext.destination);
 
-    console.log('Equalizer applied');
+    devLog('Equalizer applied');
 
     previousAudioSource = audioSource;
 }
@@ -101,7 +111,7 @@ function applyEqualizer(ae_audioElement: HTMLMediaElement) {
 
 // MARK: disableEqualizer
 function disableEqualizer(audioElement: HTMLMediaElement) {
-    console.log('disableEqualizer');
+    devLog('disableEqualizer');
     // Disconnect filters
     appliedFilters.forEach((filter) => filter.disconnect());
     appliedFilters = [];
@@ -109,7 +119,7 @@ function disableEqualizer(audioElement: HTMLMediaElement) {
     if (audioElement && mediaElementSources.has(audioElement)) {
         const sourceNode = mediaElementSources.get(audioElement)!;
         try {
-            console.log('[disableEqualizer] Reconnecting sourceNode directly to destination');
+            devLog('[disableEqualizer] Reconnecting sourceNode directly to destination');
             sourceNode.disconnect();
             sourceNode.connect(audioContext.destination);
         } catch (e) {
@@ -121,13 +131,13 @@ function disableEqualizer(audioElement: HTMLMediaElement) {
 
 // MARK: applyEQIfPlaying
 function applyEQIfPlaying() {
-    console.log('applyEQIfPlaying');
+    devLog('applyEQIfPlaying');
     const audios = document.querySelectorAll<HTMLMediaElement>('audio, video');
     audios.forEach(audio => {
         if (!audio.paused && !audio.ended && audio.readyState > 2) {
             lastPlayedElement = audio;
             if (eqEnabled) {
-                console.log('[applyEQIfPlaying] Applying EQ to currently playing element');
+                devLog('[applyEQIfPlaying] Applying EQ to currently playing element');
                 applyEqualizer(audio);
             }
         }
@@ -138,12 +148,12 @@ function applyEQIfPlaying() {
 // MARK: Initial load from storage
 chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
     eqEnabled = !!data.eqEnabled;
-    console.log('[content] eqEnabled state on load:', eqEnabled);
+    devLog('[content] eqEnabled state on load:', eqEnabled);
 
     // Load currentFilters
     if (Array.isArray(data.currentFilters) && data.currentFilters.length === equalizerFilters.length) {
         updateFilters(data.currentFilters);
-        console.log('[content] Loaded currentFilters from storage:', data.currentFilters);
+        devLog('[content] Loaded currentFilters from storage:', data.currentFilters);
     }
 
     updateEQBtnVisual();
@@ -154,13 +164,13 @@ chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
 
 // React to storage changes (all tabs update EQ automatically)
 chrome.storage.onChanged.addListener((changes, area) => {
-    console.log('[content] storage.onChanged detected:', changes, area);
+    devLog('[content] storage.onChanged detected:', changes, area);
 
     // Handle eqEnabled changes
     if (changes.eqEnabled) {
         eqEnabled = !!changes.eqEnabled.newValue;
 
-        console.log('[content] eqEnabled changed:', eqEnabled);
+        devLog('[content] eqEnabled changed:', eqEnabled);
 
         updateEQBtnVisual();
 
@@ -175,7 +185,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
     // Handle direct filter changes
     if (changes.currentFilters) {
-        console.log('[content] currentFilters changed:', changes.currentFilters.newValue);
+        devLog('[content] currentFilters changed:', changes.currentFilters.newValue);
         const newFilters = changes.currentFilters.newValue;
         if (Array.isArray(newFilters) && newFilters.length === equalizerFilters.length) {
             updateFilters(newFilters);
@@ -214,7 +224,7 @@ document.addEventListener('play', function (e) {
     if (eqEnabled) {
         if (lastPlayedElement === e.target && appliedFilters.length > 0) {
             // Already applied
-            console.log('[addEventListener play] Equalizer already applied to this element');
+            devLog('[addEventListener play] Equalizer already applied to this element');
         } else {
             applyEqualizer(e.target as HTMLMediaElement);
         }

@@ -8,6 +8,39 @@ export interface FilterPreset {
   }>;
 }
 
+export const presetDisplayNames: Record<string, string> = {
+  flat: "Flat",
+  acoustic: "Acoustic",
+  bassBooster: "Bass Booster",
+  bassReducer: "Bass Reducer",
+  classical: "Classical",
+  club: "Club",
+  dance: "Dance",
+  deep: "Deep",
+  electronic: "Electronic",
+  hipHop: "Hip Hop",
+  jazz: "Jazz",
+  latin: "Latin",
+  live: "Live",
+  loudness: "Loudness",
+  lounge: "Lounge",
+  metal: "Metal",
+  piano: "Piano",
+  pop: "Pop",
+  reggae: "Reggae",
+  rnb: "R&B",
+  rock: "Rock",
+  ska: "Ska",
+  smallSpeakers: "Small Speakers",
+  soft: "Soft",
+  softRock: "Soft Rock",
+  spokenWord: "Spoken Word",
+  techno: "Techno",
+  trebleBooster: "Treble Booster",
+  trebleReducer: "Treble Reducer",
+  vocalBooster: "Vocal Booster",
+};
+
 const defaultPresets: FilterPreset[] = [
   {
     name: "flat",

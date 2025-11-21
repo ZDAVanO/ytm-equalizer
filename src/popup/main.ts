@@ -1,5 +1,6 @@
 import './style.css'
-import defaultPresets from '../defaultPresets'
+
+import defaultPresets, { FilterPreset, presetDisplayNames } from '../defaultPresets'
 import { filterTypes, filterTypeShort } from '../filterTypes';
 
 console.log('Popup script loaded');
@@ -31,43 +32,6 @@ const freqLabels: Record<number, string> = {
   4000: "4KHz",
   8000: "8KHz",
   16000: "16KHz"
-};
-
-
-// Display names for default presets
-const presetDisplayNames: Record<string, string> = {
-  flat: "Flat",
-  acoustic: "Acoustic",
-  bassBooster: "Bass Booster",
-  bassBoosterPlus: "Bass Booster Plus",
-  BassBoosterUltra: "Bass Booster Ultra",
-  bassReducer: "Bass Reducer",
-  classical: "Classical",
-  club: "Club",
-  dance: "Dance",
-  deep: "Deep",
-  electronic: "Electronic",
-  hipHop: "Hip Hop",
-  jazz: "Jazz",
-  latin: "Latin",
-  live: "Live",
-  loudness: "Loudness",
-  lounge: "Lounge",
-  metal: "Metal",
-  piano: "Piano",
-  pop: "Pop",
-  reggae: "Reggae",
-  rnb: "R&B",
-  rock: "Rock",
-  ska: "Ska",
-  smallSpeakers: "Small Speakers",
-  soft: "Soft",
-  softRock: "Soft Rock",
-  spokenWord: "Spoken Word",
-  techno: "Techno",
-  trebleBooster: "Treble Booster",
-  trebleReducer: "Treble Reducer",
-  vocalBooster: "Vocal Booster"
 };
 
 
@@ -131,12 +95,13 @@ document.querySelector('#app')!.innerHTML = `
 
 
 
-type Preset = { name: string, filters: any[] }
-let userPresets: Preset[] = []
+let userPresets: FilterPreset[] = []
 
-let currentFilters: any[] = [];
+let currentFilters: FilterPreset['filters'] = []
 
-const presetsSelect = document.querySelector<HTMLSelectElement>('#presets-select')!
+const eqToggle = document.getElementById('eq-toggle-btn') as HTMLButtonElement;
+
+const presetsSelect = document.getElementById('presets-select') as HTMLSelectElement;
 
 const savePresetBtn = document.getElementById('save-preset-btn') as HTMLButtonElement
 const deletePresetBtn = document.getElementById('delete-preset-btn') as HTMLButtonElement
@@ -248,7 +213,7 @@ modalSaveBtn.addEventListener("click", () => {
     return;
   }
 
-  const newPreset: Preset = { name: name, filters: getCurrentFiltersFromUI() };
+  const newPreset: FilterPreset = { name: name, filters: getCurrentFiltersFromUI() };
   userPresets.push(newPreset);
   chrome.storage.local.set({ userPresets });
 
@@ -308,9 +273,7 @@ chrome.storage.local.get("selectedPreset", data => {
 presetsSelect.addEventListener("change", () => {
   chrome.storage.local.set({ selectedPreset: presetsSelect.value })
   setSlidersFromPreset(presetsSelect.value)
-
   updateCurrentFilters();
-
   // Update delete button state on change
   updateDeleteButtonState()
 });
@@ -318,18 +281,13 @@ presetsSelect.addEventListener("change", () => {
 
 
 // MARK: Toggle
-// Get reference to the Equalizer toggle button
-const eqToggle = document.querySelector<HTMLButtonElement>('#eq-toggle-btn')!;
-
-
 // Update the button appearance and text based on enabled state
 function updateEqToggle(enabled: boolean) {
   eqToggle.classList.toggle('on', enabled);
   eqToggle.textContent = enabled ? "Equalizer ON" : "Equalizer OFF";
 }
 
-
-// Initialize button state from chrome.storage
+// Initialize switch state from chrome.storage
 chrome.storage.local.get("eqEnabled", data => {
   const enabled = Boolean(data.eqEnabled);
   updateEqToggle(enabled);
@@ -344,7 +302,6 @@ eqToggle.addEventListener("click", () => {
     updateEqToggle(newState);
   });
 });
-
 
 
 
@@ -375,7 +332,7 @@ function autosavePreset() {
   if (isUserPreset(name)) {
     console.log('[autosavePreset] UserPreset');
     const filters = getCurrentFiltersFromUI();
-    const newPreset: Preset = { name: name, filters };
+    const newPreset: FilterPreset = { name: name, filters };
 
     const idx = userPresets.findIndex(p => p.name === name);
     if (idx === -1) return;
@@ -387,7 +344,7 @@ function autosavePreset() {
   if (isDefaultPreset(name)) {
     console.log('[autosavePreset] DefaultPreset');
     const filters = getCurrentFiltersFromUI();
-    const customPreset: Preset = { name: customPresetName, filters };
+    const customPreset: FilterPreset = { name: customPresetName, filters };
 
     // add or update [Custom] preset
     const idx = userPresets.findIndex(p => p.name === customPresetName);

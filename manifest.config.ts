@@ -3,7 +3,7 @@ import pkg from './package.json'
 
 export default defineManifest({
   manifest_version: 3,
-  name: pkg.name,
+  name: "YTM Equalizer",
   version: pkg.version,
   description: pkg.description,
   icons: {

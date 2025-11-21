@@ -116,10 +116,17 @@ document.querySelector('#app')!.innerHTML = `
     <!-- Modal for new preset name -->
     <div id="preset-modal" class="modal" style="display:none;">
       <div class="modal-content">
-        <span id="close-modal" class="close">&times;</span>
-        <h3>Enter new preset name</h3>
-        <input id="preset-name-input" type="text" placeholder="New preset name" />
-        <button id="modal-save-btn" type="button">Save</button>
+        <div class="modal-header">
+          <span class="modal-title">New preset</span>
+          <button id="close-modal" class="close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input id="preset-name-input" type="text" placeholder="New preset name" />
+        </div>
+        <div class="modal-footer">
+          <button id="modal-save-btn" type="button">Save</button>
+          <button id="modal-cancel-btn" type="button">Close</button>
+        </div>
       </div>
     </div>
     
@@ -140,9 +147,9 @@ const savePresetBtn = document.getElementById('save-preset-btn') as HTMLButtonEl
 const deletePresetBtn = document.getElementById('delete-preset-btn') as HTMLButtonElement
 
 const presetModal = document.getElementById('preset-modal') as HTMLDivElement
-const closeModalBtn = document.getElementById('close-modal') as HTMLSpanElement
+const closeModalBtn = document.getElementById('close-modal') as HTMLButtonElement
 const modalSaveBtn = document.getElementById('modal-save-btn') as HTMLButtonElement
-
+const modalCancelBtn = document.getElementById('modal-cancel-btn') as HTMLButtonElement
 const presetNameInput = document.getElementById('preset-name-input') as HTMLInputElement
 
 const customPresetName = "[Custom]"
@@ -213,22 +220,22 @@ function setSlidersFromPreset(presetName: string) {
   updateDeleteButtonState()
 }
 
-
 // --- Save preset (open modal) ---
 savePresetBtn.addEventListener("click", () => {
-  presetModal.style.display = "block";
+  presetModal.style.display = "flex";
   presetNameInput.value = "";
   presetNameInput.focus();
 });
 
-
 // --- Modal close logic ---
-closeModalBtn.onclick = () => {
+function closeModal() {
   presetModal.style.display = "none";
-};
+}
+closeModalBtn.onclick = closeModal;
+modalCancelBtn.onclick = closeModal;
 window.onclick = (event) => {
   if (event.target === presetModal) {
-    presetModal.style.display = "none";
+    closeModal();
   }
 };
 
@@ -335,7 +342,6 @@ eqToggle.addEventListener("click", () => {
     updateEqToggle(newState);
   });
 });
-
 
 
 function getCurrentFiltersFromUI(): any[] {

@@ -1,4 +1,3 @@
-
 *,
 *:before,
 *:after {
@@ -34,7 +33,7 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 
 
@@ -62,6 +61,7 @@
   transform: rotate(-90deg);
   transform-origin: center;
   position: absolute;
+  cursor: pointer;
 }
 
 .range-slider__range::-webkit-slider-thumb {
@@ -77,11 +77,15 @@
   box-shadow: -5px 0px 8px 0.5px rgba(0, 0, 0, 0.36),
     -0.5px 0px 7px 0.5px rgba(0, 0, 0, 0.19) inset;
   cursor: pointer;
-  transition: background 0.15s ease-in-out;
+  transition: background 0.15s ease-in-out, border 0.25s;
 }
 
 .range-slider__range:active::-webkit-slider-thumb {
-  background: linear-gradient(90deg, #252525 0%, #212121 100%);
+  background: linear-gradient(90deg, #353535 0%, #313131 100%);
+}
+
+.range-slider__range:hover::-webkit-slider-thumb {
+  border: 2px solid #646cff;
 }
 
 .range-slider__range::-moz-range-thumb {
@@ -97,14 +101,15 @@
   box-shadow: -5px 0px 8px 0.5px rgba(0, 0, 0, 0.36),
     -0.5px 0px 7px 0.5px rgba(0, 0, 0, 0.19) inset;
   cursor: pointer;
-  transition: background 0.15s ease-in-out;
+  transition: background 0.15s ease-in-out, border 0.25s;
 }
 
 .range-slider__range::-moz-range-thumb:hover {
+  border: 2px solid #646cff;
 }
 
 .range-slider__range:active::-moz-range-thumb {
-  background: linear-gradient(90deg, #252525 0%, #212121 100%);
+  background: linear-gradient(90deg, #353535 0%, #313131 100%);
 }
 
 .range-slider__range::-moz-range-track {
@@ -128,12 +133,6 @@ input::-moz-focus-outer {
 
 
 
-
-
-.value {
-  /* position: absolute;
-  top: 9%; */
-}
 .value input[type="number"] {
   width: 42px;
   height: 21px;
@@ -151,9 +150,6 @@ input::-moz-focus-outer {
 }
 
 
-.freq-value {
-
-}
 .freq-value p{
   width: 42px;
   height: 21px;
@@ -161,10 +157,6 @@ input::-moz-focus-outer {
 }
 
 /* MARK: filter type */
-.filter-type {
-  /* position: absolute;
-  bottom: 2%; */
-}
 .filter-type select {
   width: 42px;
   height: 22px;
@@ -186,10 +178,6 @@ input::-moz-focus-outer {
 }
 
 /* MARK: q value */
-.q-value {
-  /* position: absolute;
-  bottom: -6%; */
-}
 .q-value input[type="number"] {
   width: 42px;
   height: 21px;

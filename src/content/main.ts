@@ -1,9 +1,9 @@
 import { filterTypes } from '../filterTypes';
+import { devLog } from '../utils';
 
 import './style.css'
 import eq_icon from '@/assets/equalizer-svgrepo-com.svg'
 
-import { devLog } from '../utils';
 
 console.log('[content] YTM Equalizer Extension loaded');
 
@@ -18,7 +18,6 @@ let previousAudioSource: MediaElementAudioSourceNode | null = null;
 let lastPlayedElement: HTMLMediaElement | null = null;
 
 const FILTER_COUNT = 10;
-// const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_COUNT }, () => audioContext.createBiquadFilter());
 const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_COUNT }, () => {
     const filter = audioContext.createBiquadFilter();
     filter.type = 'peaking';

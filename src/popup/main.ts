@@ -4,7 +4,7 @@ import ytm_eq_icon from '@/assets/icon-128.png';
 import { version } from '../../package.json';
 
 import defaultPresets, { FilterPreset, presetDisplayNames } from '../defaultPresets';
-import { filterTypes, filterTypeShort } from '../filterTypes';
+import { filterTypes, filterTypeShort, filterTypeDescriptions } from '../filterTypes';
 import { devLog } from '../utils';
 
 console.log('Popup script loaded');
@@ -12,16 +12,16 @@ console.log('Popup script loaded');
 
 
 const slidersConfig = [
-  { idx: 1, initial: 0, freq: 32 },
-  { idx: 2, initial: 0, freq: 64 },
-  { idx: 3, initial: 0, freq: 125 },
-  { idx: 4, initial: 0, freq: 250 },
-  { idx: 5, initial: 0, freq: 500 },
-  { idx: 6, initial: 0, freq: 1000 },
-  { idx: 7, initial: 0, freq: 2000 },
-  { idx: 8, initial: 0, freq: 4000 },
-  { idx: 9, initial: 0, freq: 8000 },
-  { idx: 10, initial: 0, freq: 16000 }
+  { idx: 1, freq: 32 },
+  { idx: 2, freq: 64 },
+  { idx: 3, freq: 125 },
+  { idx: 4, freq: 250 },
+  { idx: 5, freq: 500 },
+  { idx: 6, freq: 1000 },
+  { idx: 7, freq: 2000 },
+  { idx: 8, freq: 4000 },
+  { idx: 9, freq: 8000 },
+  { idx: 10, freq: 16000 }
 ];
 
 const freqLabels: Record<number, string> = {
@@ -39,13 +39,14 @@ const freqLabels: Record<number, string> = {
 
 
 
+
 // MARK: renderSlider
-function renderSlider(idx: number, initial: number, freq: number) {
+function renderSlider(idx: number, freq: number) {
   return `
     <div id="range-slider" class="range-slider">
 
       <div class="value">
-        <input type="number" id="input${idx}" class="number-fx" min="-12" max="12" step=".1" value="${initial}">
+        <input type="number" id="input${idx}" class="number-fx" min="-12" max="12" step=".1" value="0">
       </div>
 
 
@@ -55,7 +56,7 @@ function renderSlider(idx: number, initial: number, freq: number) {
           <div class="slider-bg-2"></div>
         </div>
 
-        <input class="range-slider__range" id="slider${idx}" type="range" value="${initial}" min="-12" max="12" step=".1">
+        <input class="range-slider__range" id="slider${idx}" type="range" value="0" min="-12" max="12" step=".01">
       
       </div>
 
@@ -66,12 +67,15 @@ function renderSlider(idx: number, initial: number, freq: number) {
 
       <div class="filter-type">
         <select id="filter-type-${idx}" class="number-fx">
-          ${filterTypes.map(type => `<option value="${type}">${filterTypeShort[type]}</option>`).join('')}
+          ${filterTypes.map(type =>
+            `<option value="${type}" title="${filterTypeDescriptions[type]}">${filterTypeShort[type]}</option>`
+          ).join('')}
         </select>
       </div>
 
       <div class="q-value">
-        <input type="number" id="q-input-${idx}" class="number-fx" min="0.1" max="10" step="0.01" value="1.0" />
+        <input type="number" id="q-input-${idx}" class="number-fx" min="0.1" max="10" step="0.01" value="1.0"
+          title="Q (Quality factor):&#10;Controls the bandwidth of the filter.&#10;Lower Q = wider filter.&#10;Higher Q = narrower filter." />
       </div>
 
     </div>
@@ -111,7 +115,7 @@ document.querySelector('#app')!.innerHTML = `
     </div>
 
     <div class="sliders-row">
-      ${slidersConfig.map(cfg => renderSlider(cfg.idx, cfg.initial, cfg.freq)).join('')}
+      ${slidersConfig.map(cfg => renderSlider(cfg.idx, cfg.freq)).join('')}
     </div>
 
     <!-- Modal for new preset name -->
@@ -373,10 +377,15 @@ function autosavePreset() {
     devLog('[autosavePreset] UserPreset');
     const filters = getCurrentFiltersFromUI();
     const newPreset: FilterPreset = { name: name, filters };
+    const customPreset: FilterPreset = { name: customPresetName, filters };
 
     const idx = userPresets.findIndex(p => p.name === name);
     if (idx === -1) return;
     userPresets[idx] = newPreset;
+
+    // update [Custom] preset
+    const customIdx = userPresets.findIndex(p => p.name === customPresetName);
+    userPresets[customIdx] = customPreset;
 
     chrome.storage.local.set({ userPresets });
   }
@@ -417,7 +426,7 @@ function handleEqChanges() {
 
 
 // MARK: Setup event listeners
-slidersConfig.forEach(({ initial }, i) => {
+slidersConfig.forEach((_, i) => {
 
   const sliderElem = document.getElementById(`slider${i+1}`) as HTMLInputElement;
   const inputElem = document.getElementById(`input${i+1}`) as HTMLInputElement;
@@ -441,7 +450,7 @@ slidersConfig.forEach(({ initial }, i) => {
   // Manual input changes update slider
   inputElem.addEventListener("input", function () {
     let val = parseFloat(this.value);
-    if (isNaN(val)) val = initial;
+    if (isNaN(val)) val = 0;
     val = Math.max(Number(sliderElem.min), Math.min(Number(sliderElem.max), val));
     sliderElem.value = val.toString();
     inputElem.value = sliderElem.value;
@@ -476,12 +485,12 @@ slidersConfig.forEach(({ initial }, i) => {
       qInputElem.value = val.toString();
     });
 
-    // Додаємо wheel для зміни Q
+    // Add wheel for changing Q
     qInputElem.addEventListener("wheel", (e: WheelEvent) => {
       e.preventDefault();
       let val = parseFloat(qInputElem.value);
       if (isNaN(val)) val = 1.0;
-      // Змінюємо на step (0.01)
+      // Change by step (0.01)
       const step = 0.01;
       if (e.deltaY < 0) {
         val += step;
@@ -495,6 +504,41 @@ slidersConfig.forEach(({ initial }, i) => {
 
   }
 
+  // Add wheel for changing gain
+  inputElem.addEventListener("wheel", (e: WheelEvent) => {
+    e.preventDefault();
+    let val = parseFloat(inputElem.value);
+    if (isNaN(val)) val = 0;
+    // Change by step (0.05)
+    const step = 0.05;
+    if (e.deltaY < 0) {
+      val += step;
+    } else {
+      val -= step;
+    }
+    val = Math.max(Number(sliderElem.min), Math.min(Number(sliderElem.max), Math.round(val * 100) / 100));
+    inputElem.value = val.toString();
+    sliderElem.value = inputElem.value;
+    handleEqChanges();
+  });
+
+  // Add wheel for changing gain when hovering slider
+  sliderElem.addEventListener("wheel", (e: WheelEvent) => {
+    e.preventDefault();
+    let val = parseFloat(sliderElem.value);
+    if (isNaN(val)) val = 0;
+    // Change by step (0.05)
+    const step = 0.05;
+    if (e.deltaY < 0) {
+      val += step;
+    } else {
+      val -= step;
+    }
+    val = Math.max(Number(sliderElem.min), Math.min(Number(sliderElem.max), Math.round(val * 100) / 100));
+    sliderElem.value = val.toString();
+    inputElem.value = sliderElem.value;
+    handleEqChanges();
+  });
 
 
 

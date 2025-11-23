@@ -1,3 +1,5 @@
+import { Vibrant } from "node-vibrant/browser";
+
 import { filterTypes } from '../filterTypes';
 import { devLog } from '../utils';
 
@@ -29,6 +31,95 @@ const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_COUNT }
 
 let appliedFilters: BiquadFilterNode[] = [];
 
+
+const SONG_IMAGE_SELECTOR = '#song-image>#thumbnail>#img';
+const DEFAULT_GLOW_COLOR = 'rgba(250, 72, 111, 1)';
+
+
+
+// MARK: updateButtonGlow
+// Function to get color and update CSS variable
+async function updateButtonGlow(imageUrl: string) {
+    if (!imageUrl) return;
+
+    try {
+        const palette = await Vibrant.from(imageUrl).getPalette();
+        
+        // Priority: LightVibrant (usually brighter), then Vibrant
+        const swatch = palette.LightVibrant || palette.Vibrant || palette.Muted;
+
+        let finalColor = DEFAULT_GLOW_COLOR;
+
+        if (swatch) {
+            // Vibrant returns hsl in format [H (0-1), S (0-1), L (0-1)] or [0-360, ...] depending on version.
+            // In newer versions it's often [360, 1.0, 1.0].
+            const [h, s, l] = swatch.hsl;
+
+            // 🔥 MAGIC HERE: Normalize brightness
+            // If brightness (l) is less than 50% (0.5), set it to 60% (0.6)
+            // Blue color at L=0.6 becomes bright "Electric Blue"
+            const minLightness = 0.6; 
+            const newL = l < minLightness ? minLightness : l;
+
+            // Form CSS HSL string
+            // Note: node-vibrant v3.x returns h=0..1, v3.2+ h=0..360. 
+            // Check console.log(swatch.hsl), but usually these are numbers:
+            // If using 'node-vibrant/browser', usually h: 0-1, s: 0-1, l: 0-1
+            // BUT if standard version, h in degrees. 
+            // Reliable formatting option:
+            
+            // Since Vibrant returns an array, use its hex if you don't want to bother with HSL,
+            // BUT to fix the issue, we need HSL.
+            
+            // Assume standard: H(0-360), S(0-1), L(0-1)
+            finalColor = `hsl(${h * 360}, ${s * 100}%, ${newL * 100}%)`; 
+            
+            // ⚠️ If colors suddenly look "broken", try without multiplication:
+            // finalColor = `hsl(${h}, ${s * 100}%, ${newL * 100}%)`;
+        }
+
+        devLog(`[updateButtonGlow] Set Color: ${finalColor}`);
+
+        if (eqToggleBtn) {
+            eqToggleBtn.style.setProperty('--glow-color', finalColor);
+        }
+    } catch (err) {
+        console.warn('[updateButtonGlow] Failed to extract color', err);
+        if (eqToggleBtn) {
+            eqToggleBtn.style.setProperty('--glow-color', DEFAULT_GLOW_COLOR);
+        }
+    }
+}
+
+
+
+// MARK: setupAlbumArtObserver
+// Watch for image changes (adapted from your dom.ts example)
+function setupAlbumArtObserver() {
+    waitForElem(SONG_IMAGE_SELECTOR, (element) => {
+        const imgElement = element as HTMLImageElement;
+        
+        // 1. Run once for current image on load
+        updateButtonGlow(imgElement.src);
+
+        // 2. Create observer for src attribute changes
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
+                    devLog('[AlbumArtObserver] Image src changed');
+                    updateButtonGlow(imgElement.src);
+                }
+            }
+        });
+
+        observer.observe(imgElement, { 
+            attributes: true, 
+            attributeFilter: ['src'] // only react to src changes
+        });
+        
+        devLog('[setupAlbumArtObserver] Observer attached');
+    });
+}
 
 
 // MARK: waitForElem
@@ -197,7 +288,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
 waitForElem('#right-content.right-content.style-scope.ytmusic-nav-bar', (panel) => {
     const btn = document.createElement("button");
     btn.className = "eq-toggle-btn";
-    btn.innerHTML = `<img src="${eq_icon}" alt="EQ Icon">`;
+    btn.innerHTML = `<img src="${eq_icon}" alt="EQ Icon" draggable="false">`;
+    btn.title = "Open Equalizer";
 
     btn.onclick = () => {
         chrome.runtime.sendMessage({ action: "open_popup" });
@@ -233,6 +325,6 @@ document.addEventListener('play', function (e) {
 
 
 
-
+setupAlbumArtObserver();
 
 

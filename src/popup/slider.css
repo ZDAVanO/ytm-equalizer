@@ -51,6 +51,7 @@
 
 .range-slider__range {
   z-index: 10;
+  appearance: none;
   -webkit-appearance: none;
   border-radius: 6px;
   width: 210px;
@@ -201,6 +202,7 @@ input[type="number"].number-fx::-webkit-outer-spin-button {
   margin: 0;
 }
 input[type="number"].number-fx {
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 input[type="number"].number-fx::-ms-inner-spin-button,

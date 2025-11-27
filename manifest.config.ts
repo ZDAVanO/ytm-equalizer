@@ -22,9 +22,10 @@ export default defineManifest({
   },
   content_scripts: [{
     js: ['src/content/main.ts'],
-    "matches": [
-        "*://music.youtube.com/*"
-    ],
+    // "matches": [
+    //     "*://music.youtube.com/*"
+    // ],
+    "matches": ["<all_urls>"],
   }],
   permissions: [
     'storage',

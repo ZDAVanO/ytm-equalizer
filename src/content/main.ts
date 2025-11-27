@@ -1,11 +1,9 @@
 import './style.css';
 
-import eq_icon from '@/assets/equalizer-svgrepo-com.svg';
+// import * as Constants from '@constants';
+import { devLog } from '@utils';
 
-import * as Constants from '@constants';
-import { devLog, waitForElem } from '@utils';
-
-import { setupAlbumArtObserver, updateButtonGlow } from './albumArt';
+import { insertEQButton, updateEQBtnVisual } from './eqButton';
 
 import {
   updateFilters,
@@ -26,6 +24,12 @@ console.log('[content] YTM Equalizer Extension loaded');
 let eqEnabled = false;
 let eqBtn: HTMLButtonElement | null = null;
 
+if (window.location.hostname === 'music.youtube.com') {
+    devLog('[content] Detected YouTube Music domain, inserting EQ button');
+    eqBtn = insertEQButton(() => {
+        chrome.runtime.sendMessage({ action: "open_popup" });
+    });
+}
 
 // MARK: Initial load from storage
 chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
@@ -38,7 +42,7 @@ chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
         devLog('[content] Loaded currentFilters from storage:', data.currentFilters);
     }
 
-    updateEQBtnVisual();
+    updateEQBtnVisual(eqBtn, eqEnabled);
 
     applyEQIfPlaying(eqEnabled);
 });
@@ -54,7 +58,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
         devLog('[content] eqEnabled changed:', eqEnabled);
 
-        updateEQBtnVisual();
+        updateEQBtnVisual(eqBtn, eqEnabled);
 
         if (lastPlayedElement) {
             if (eqEnabled) {
@@ -74,32 +78,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
         }
     }
 });
-
-
-// MARK: Insert EQ Toggle Button
-waitForElem(Constants.NAV_BAR_SELECTOR, (panel) => {
-    const btn = document.createElement("button");
-    btn.className = Constants.EQ_BTN;
-    btn.innerHTML = `<img src="${eq_icon}" alt="EQ Icon" draggable="false">`;
-    btn.title = "Open Equalizer";
-
-    btn.onclick = () => {
-        chrome.runtime.sendMessage({ action: "open_popup" });
-    };
-
-    eqBtn = btn;
-    panel.insertBefore(btn, panel.firstChild);
-
-    setupAlbumArtObserver((imageUrl) => updateButtonGlow(imageUrl, eqBtn));
-});
-
-
-// MARK: updateEQBtnVisual
-function updateEQBtnVisual() {
-    if (eqBtn) {
-        eqBtn.classList.toggle('on', eqEnabled);
-    }
-}
 
 
 // MARK: Listen for play events

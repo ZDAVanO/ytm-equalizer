@@ -1,8 +1,7 @@
 
-/* 1. Оголошуємо змінну як колір, щоб браузер вмів її анімувати */
 @property --glow-color {
   syntax: '<color>';
-  initial-value: rgba(250, 72, 111, 1); /* Твій дефолтний рожевий */
+  initial-value: rgba(250, 72, 111, 1);
   inherits: true;
 }
 
@@ -28,18 +27,12 @@
     --glow-color: rgba(250, 72, 111, 1);
 }
 
-/* .eq-toggle-btn.on {
-    background: rgb(250, 72, 111, 0.8);
-    box-shadow: 0 0 12px 4px rgba(250, 72, 111, 0.7), 0 0 2px 1px rgba(250, 72, 111, 0.5);
-} */
-
 .eq-toggle-btn::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 100%;
 
-  /* background: radial-gradient(circle, rgba(250, 72, 111, 1), transparent 100%); */
   background: radial-gradient(circle, var(--glow-color), transparent 80%);
 
   filter: blur(10px);
@@ -65,17 +58,7 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-/* Visualizer Styles */
+/* MARK: Visualizer Styles */
 .visualizer-container {
     position: absolute;
     top: 0;
@@ -84,7 +67,7 @@
     height: 100%;
     pointer-events: none;
     z-index: 0;
-    background: rgba(255, 0, 0, 0); /* Semi-transparent red background */
+    background: rgba(255, 0, 0, 0.4);
 }
 
 .visualizer-container canvas {

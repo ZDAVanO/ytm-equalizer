@@ -1,150 +1,30 @@
+import './style.css';
 
+import eq_icon from '@/assets/equalizer-svgrepo-com.svg';
 
-import { filterTypes } from '../filterTypes';
-import { devLog, waitForElem } from '../utils';
-
-import './style.css'
-import eq_icon from '@/assets/equalizer-svgrepo-com.svg'
-
+import * as Constants from '@constants';
+import { devLog, waitForElem } from '@utils';
 
 import { setupAlbumArtObserver, updateButtonGlow } from './albumArt';
-// import { initVisualizer } from './visualizer';
+
+import {
+  updateFilters,
+  applyEqualizer,
+  disableEqualizer,
+  applyEQIfPlaying,
+  equalizerFilters,
+  appliedFilters,
+  lastPlayedElement,
+  setLastPlayedElement,
+  // getLastPlayedElement
+} from './equalizer';
+
 
 console.log('[content] YTM Equalizer Extension loaded');
 
 
-
-
-
 let eqEnabled = false;
-let eqToggleBtn: HTMLButtonElement | null = null;
-
-const audioContext = new AudioContext();
-// const analyser = audioContext.createAnalyser();
-// analyser.fftSize = 256; // Set FFT size for visualizer
-
-const mediaElementSources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
-let previousAudioSource: MediaElementAudioSourceNode | null = null;
-let lastPlayedElement: HTMLMediaElement | null = null;
-
-const FILTER_COUNT = 10;
-const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_COUNT }, () => {
-    const filter = audioContext.createBiquadFilter();
-    filter.type = 'peaking';
-    filter.frequency.value = 0;
-    filter.Q.value = 1;
-    filter.gain.value = 0;
-    return filter;
-});
-
-let appliedFilters: BiquadFilterNode[] = [];
-
-
-
-// MARK: updateFilters
-function updateFilters(filters: any[]) {
-    filters.forEach((band, i) => {
-        const filter = equalizerFilters[i];
-        if (filter) {
-            filter.type = filterTypes.includes(band.type) ? band.type : 'peaking';
-            filter.frequency.value = band.freq || 0;
-            filter.Q.value = band.Q || 1;
-            filter.gain.value = band.gain || 0;
-        }
-    });
-}
-
-
-// MARK: applyEqualizer
-function applyEqualizer(ae_audioElement: HTMLMediaElement) {
-    devLog('[applyEqualizer]');
-
-    let audioSource: MediaElementAudioSourceNode;
-
-    if (mediaElementSources.has(ae_audioElement)) {
-        devLog('MediaElementSourceNode already connected');
-        audioSource = mediaElementSources.get(ae_audioElement)!;
-
-    } else {
-        devLog('MediaElementSourceNode not found, creating new one');
-        audioSource = audioContext.createMediaElementSource(ae_audioElement);
-        mediaElementSources.set(ae_audioElement, audioSource); // save source to weakmap
-    }
-
-    devLog('previousAudioSource', previousAudioSource);
-    if (previousAudioSource) {
-        previousAudioSource.disconnect();
-    }
-
-    devLog('mediaElementSources', mediaElementSources);
-
-
-    appliedFilters.forEach((filter) => filter.disconnect());
-    appliedFilters = [];
-
-
-    let currentNode: AudioNode = audioSource;
-    for (const filter of equalizerFilters) {
-        // devLog('Connecting filter', filter);
-        currentNode.connect(filter);
-        appliedFilters.push(filter);
-        currentNode = filter;
-    }
-    devLog('appliedFilters', appliedFilters);
-    
-    currentNode.connect(audioContext.destination);
-    // Connect to analyser before destination
-    // currentNode.connect(analyser);
-    // analyser.connect(audioContext.destination);
-
-    devLog('Equalizer applied');
-
-    previousAudioSource = audioSource;
-}
-
-
-// MARK: disableEqualizer
-function disableEqualizer(audioElement: HTMLMediaElement) {
-    devLog('disableEqualizer');
-    // Disconnect filters
-    appliedFilters.forEach((filter) => filter.disconnect());
-    appliedFilters = [];
-    // Reconnect source directly to destination
-    if (audioElement && mediaElementSources.has(audioElement)) {
-        const sourceNode = mediaElementSources.get(audioElement)!;
-        try {
-            devLog('[disableEqualizer] Reconnecting sourceNode directly to destination');
-            sourceNode.disconnect();
-
-            sourceNode.connect(audioContext.destination);
-            // Still connect through analyser even if EQ is disabled, so visualizer works
-            // sourceNode.connect(analyser);
-            // analyser.connect(audioContext.destination);
-            
-        } catch (e) {
-            console.warn('[disableEqualizer] Error reconnecting sourceNode:', e);
-        }
-    }
-}
-
-
-// MARK: applyEQIfPlaying
-function applyEQIfPlaying() {
-    devLog('applyEQIfPlaying');
-    const audios = document.querySelectorAll<HTMLMediaElement>('audio, video');
-    audios.forEach(audio => {
-        if (!audio.paused && !audio.ended && audio.readyState > 2) {
-            lastPlayedElement = audio;
-            if (eqEnabled) {
-                devLog('[applyEQIfPlaying] Applying EQ to currently playing element');
-                applyEqualizer(audio);
-            // } else {
-            //      // Even if EQ is disabled, we might want to attach for visualizer if we want it always on
-            //      disableEqualizer(audio);
-            }
-        }
-    });
-}
+let eqBtn: HTMLButtonElement | null = null;
 
 
 // MARK: Initial load from storage
@@ -160,7 +40,7 @@ chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
 
     updateEQBtnVisual();
 
-    applyEQIfPlaying();
+    applyEQIfPlaying(eqEnabled);
 });
 
 
@@ -197,9 +77,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 
 // MARK: Insert EQ Toggle Button
-waitForElem('#right-content.right-content.style-scope.ytmusic-nav-bar', (panel) => {
+waitForElem(Constants.NAV_BAR_SELECTOR, (panel) => {
     const btn = document.createElement("button");
-    btn.className = "eq-toggle-btn";
+    btn.className = Constants.EQ_BTN;
     btn.innerHTML = `<img src="${eq_icon}" alt="EQ Icon" draggable="false">`;
     btn.title = "Open Equalizer";
 
@@ -207,24 +87,25 @@ waitForElem('#right-content.right-content.style-scope.ytmusic-nav-bar', (panel) 
         chrome.runtime.sendMessage({ action: "open_popup" });
     };
 
-    eqToggleBtn = btn;
+    eqBtn = btn;
     panel.insertBefore(btn, panel.firstChild);
 
-    setupAlbumArtObserver((imageUrl) => updateButtonGlow(imageUrl, eqToggleBtn));
+    setupAlbumArtObserver((imageUrl) => updateButtonGlow(imageUrl, eqBtn));
 });
 
 
 // MARK: updateEQBtnVisual
 function updateEQBtnVisual() {
-    if (eqToggleBtn) {
-        eqToggleBtn.classList.toggle('on', eqEnabled);
+    if (eqBtn) {
+        eqBtn.classList.toggle('on', eqEnabled);
     }
 }
 
 
 // MARK: Listen for play events
 document.addEventListener('play', function (e) {
-    lastPlayedElement = e.target as HTMLMediaElement;
+    // lastPlayedElement = e.target as HTMLMediaElement;
+    setLastPlayedElement(e.target as HTMLMediaElement);
     if (eqEnabled) {
         if (lastPlayedElement === e.target && appliedFilters.length > 0) {
             // Already applied
@@ -239,5 +120,5 @@ document.addEventListener('play', function (e) {
 }, true);
 
 
-// initVisualizer(analyser);
+
 

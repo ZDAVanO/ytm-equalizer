@@ -14,7 +14,8 @@
     "@types/node": "^24.0.15",
     "typescript": "~5.8.3",
     "vite": "^7.0.5",
-    "vite-plugin-zip-pack": "^1.2.4"
+    "vite-plugin-zip-pack": "^1.2.4",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
     "node-vibrant": "^4.0.3"

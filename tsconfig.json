@@ -8,7 +8,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "paths": {
-      "~/*": ["src/*"]
+      "~/*": ["src/*"],
+      "@constants": ["./src/core/constants"],
+      "@utils" : ["./src/core/utils"],
     },
     "types": ["vite/client", "chrome", "node"],
     "allowImportingTsExtensions": true,

@@ -1,14 +1,11 @@
 import { Vibrant } from "node-vibrant/browser";
-
-import { devLog, waitForElem } from '../utils';
-
-const SONG_IMAGE_SELECTOR = '#song-image>#thumbnail>#img';
-const DEFAULT_GLOW_COLOR = 'rgba(250, 72, 111, 1)';
+import * as Constants from '@constants';
+import { devLog, waitForElem } from '@utils';
 
 
 // MARK: extractGlowColorFromImage
 export async function extractGlowColorFromImage(imageUrl: string): Promise<string> {
-    if (!imageUrl) return DEFAULT_GLOW_COLOR;
+    if (!imageUrl) return Constants.DEFAULT_GLOW_COLOR;
 
     try {
         const palette = await Vibrant.from(imageUrl).getPalette();
@@ -46,7 +43,7 @@ export async function extractGlowColorFromImage(imageUrl: string): Promise<strin
     } catch (err) {
         console.warn('[extractGlowColorFromImage] Failed to extract color', err);
     }
-    return DEFAULT_GLOW_COLOR;
+    return Constants.DEFAULT_GLOW_COLOR;
 }
 
 
@@ -62,7 +59,7 @@ export async function updateButtonGlow(imageUrl: string, eqToggleBtn: HTMLButton
 
 // MARK: setupAlbumArtObserver
 export function setupAlbumArtObserver(onImageChange: (imageUrl: string) => void) {
-    waitForElem(SONG_IMAGE_SELECTOR, (element) => {
+    waitForElem(Constants.SONG_IMAGE_SELECTOR, (element) => {
         const imgElement = element as HTMLImageElement;
 
         // 1. Run once for current image on load

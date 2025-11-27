@@ -3,9 +3,12 @@ import ytm_eq_icon from '@/assets/icon-128.png';
 
 import { version } from '../../package.json';
 
+import { devLog } from '@utils';
+import * as Constants from '@constants';
+
 import defaultPresets, { FilterPreset, presetDisplayNames } from '../defaultPresets';
 import { filterTypes, filterTypeShort, filterTypeDescriptions } from '../filterTypes';
-import { devLog } from '../utils';
+
 
 console.log('Popup script loaded');
 
@@ -108,10 +111,10 @@ document.querySelector('#app')!.innerHTML = `
   <div>
 
     <div class="card">
-      <button id="eq-toggle-btn" type="button">Equalizer</button>
-      <select id="presets-select"></select>
-      <button id="save-preset-btn" type="button">New</button>
-      <button id="delete-preset-btn" type="button">Delete</button>
+      <button id="${Constants.EQ_TOGGLE_BTN_ID}" type="button">Equalizer</button>
+      <select id="${Constants.PRESETS_SELECT_ID}"></select>
+      <button id="${Constants.SAVE_PRESET_BTN_ID}" type="button">New</button>
+      <button id="${Constants.DELETE_PRESET_BTN_ID}" type="button">Delete</button>
     </div>
 
     <div class="sliders-row">
@@ -119,18 +122,18 @@ document.querySelector('#app')!.innerHTML = `
     </div>
 
     <!-- Modal for new preset name -->
-    <div id="preset-modal" class="modal" style="display:none;">
+    <div id="${Constants.PRESET_MODAL_ID}" class="modal" style="display:none;">
       <div class="modal-content">
         <div class="modal-header">
           <span class="modal-title">New preset</span>
-          <button id="close-modal" class="close" type="button" aria-label="Close">&times;</button>
+          <button id="${Constants.CLOSE_MODAL_BTN_ID}" class="close" type="button" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body">
-          <input id="preset-name-input" type="text" placeholder="New preset name" />
+          <input id="${Constants.PRESET_NAME_INPUT_ID}" type="text" placeholder="New preset name" />
         </div>
         <div class="modal-footer">
-          <button id="modal-save-btn" type="button">Save</button>
-          <button id="modal-cancel-btn" type="button">Close</button>
+          <button id="${Constants.MODAL_SAVE_BTN_ID}" type="button">Save</button>
+          <button id="${Constants.MODAL_CANCEL_BTN_ID}" type="button">Close</button>
         </div>
       </div>
     </div>
@@ -144,18 +147,18 @@ let userPresets: FilterPreset[] = []
 
 let currentFilters: FilterPreset['filters'] = []
 
-const eqToggle = document.getElementById('eq-toggle-btn') as HTMLButtonElement;
+const eqToggle = document.getElementById(Constants.EQ_TOGGLE_BTN_ID) as HTMLButtonElement;
 
-const presetsSelect = document.getElementById('presets-select') as HTMLSelectElement;
+const presetsSelect = document.getElementById(Constants.PRESETS_SELECT_ID) as HTMLSelectElement;
 
-const savePresetBtn = document.getElementById('save-preset-btn') as HTMLButtonElement
-const deletePresetBtn = document.getElementById('delete-preset-btn') as HTMLButtonElement
+const savePresetBtn = document.getElementById(Constants.SAVE_PRESET_BTN_ID) as HTMLButtonElement;
+const deletePresetBtn = document.getElementById(Constants.DELETE_PRESET_BTN_ID) as HTMLButtonElement;
 
-const presetModal = document.getElementById('preset-modal') as HTMLDivElement
-const closeModalBtn = document.getElementById('close-modal') as HTMLButtonElement
-const modalSaveBtn = document.getElementById('modal-save-btn') as HTMLButtonElement
-const modalCancelBtn = document.getElementById('modal-cancel-btn') as HTMLButtonElement
-const presetNameInput = document.getElementById('preset-name-input') as HTMLInputElement
+const presetModal = document.getElementById(Constants.PRESET_MODAL_ID) as HTMLDivElement;
+const closeModalBtn = document.getElementById(Constants.CLOSE_MODAL_BTN_ID) as HTMLButtonElement;
+const modalSaveBtn = document.getElementById(Constants.MODAL_SAVE_BTN_ID) as HTMLButtonElement;
+const modalCancelBtn = document.getElementById(Constants.MODAL_CANCEL_BTN_ID) as HTMLButtonElement;
+const presetNameInput = document.getElementById(Constants.PRESET_NAME_INPUT_ID) as HTMLInputElement;
 
 const customPresetName = "[Custom]"
 

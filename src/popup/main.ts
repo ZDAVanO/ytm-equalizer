@@ -2,13 +2,10 @@ import "./style.css";
 import ytm_eq_icon from "@/assets/icon-128.png";
 import { version } from "../../package.json";
 import * as Constants from "@constants";
-import defaultPresets, {
-  FilterPreset,
-  presetDisplayNames,
-} from "../defaultPresets";
+import defaultPresets, { presetDisplayNames } from "./defaultPresets";
 import { StorageService } from "./services/StorageService";
 import { Slider } from "./components/Slider";
-import { SliderConfig } from "./types";
+import { SliderConfig, FilterPreset } from "./types";
 
 const slidersConfig: SliderConfig[] = [
   { idx: 1, freq: 32 },
@@ -238,25 +235,31 @@ class PopupManager {
   }
 
   private updatePresetsSelector() {
-    let html = "";
+    this.presetsSelect.innerHTML = "";
+
+    const createOption = (name: string, displayName: string) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = displayName;
+      return option;
+    };
+
     if (this.userPresets.length > 0) {
-      html += `<optgroup label="My presets">`;
-      html += this.userPresets
-        .map((p) => `<option value="${p.name}">${p.name}</option>`)
-        .join("");
-      html += `</optgroup>`;
+      const userGroup = document.createElement("optgroup");
+      userGroup.label = "My presets";
+      this.userPresets.forEach((p) => {
+        userGroup.appendChild(createOption(p.name, p.name));
+      });
+      this.presetsSelect.appendChild(userGroup);
     }
-    html += `<optgroup label="Predefined presets">`;
-    html += defaultPresets
-      .map(
-        (p) =>
-          `<option value="${p.name}">${
-            presetDisplayNames[p.name] || p.name
-          }</option>`
-      )
-      .join("");
-    html += `</optgroup>`;
-    this.presetsSelect.innerHTML = html;
+
+    const defaultGroup = document.createElement("optgroup");
+    defaultGroup.label = "Predefined presets";
+    defaultPresets.forEach((p) => {
+      const displayName = presetDisplayNames[p.name] || p.name;
+      defaultGroup.appendChild(createOption(p.name, displayName));
+    });
+    this.presetsSelect.appendChild(defaultGroup);
   }
 
   private setSlidersFromPreset(presetName: string) {
@@ -332,6 +335,12 @@ class PopupManager {
 
   private async deletePreset() {
     const name = this.presetsSelect.value;
+    
+    const isUser = this.userPresets.some((p) => p.name === name);
+    if (!isUser || name === CUSTOM_PRESET_NAME) {
+      return;
+    }
+
     this.userPresets = this.userPresets.filter((p) => p.name !== name);
     await StorageService.setUserPresets(this.userPresets);
     this.updatePresetsSelector();

@@ -1,12 +1,4 @@
-export interface FilterPreset {
-  name: string;
-  filters: Array<{
-    freq: number;
-    gain: number;
-    Q: number;
-    type: BiquadFilterType;
-  }>;
-}
+import { FilterPreset } from "./types";
 
 export const presetDisplayNames: Record<string, string> = {
   flat: "Flat",

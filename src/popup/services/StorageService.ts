@@ -1,4 +1,4 @@
-import { FilterPreset } from '../../defaultPresets';
+import { FilterPreset, Filter } from '../types';
 import { devLog } from '../../core/utils';
 
 export class StorageService {
@@ -29,7 +29,7 @@ export class StorageService {
     await chrome.storage.local.set({ eqEnabled: enabled });
   }
 
-  static async setCurrentFilters(filters: any[]): Promise<void> {
+  static async setCurrentFilters(filters: Filter[]): Promise<void> {
     devLog('[StorageService] setCurrentFilters:', filters);
     await chrome.storage.local.set({ currentFilters: filters });
   }

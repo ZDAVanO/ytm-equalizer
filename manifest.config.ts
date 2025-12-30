@@ -26,6 +26,7 @@ export default defineManifest({
     //     "*://music.youtube.com/*"
     // ],
     "matches": ["<all_urls>"],
+    "all_frames": true,
   }],
   permissions: [
     'storage',

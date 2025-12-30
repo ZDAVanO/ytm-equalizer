@@ -19,8 +19,6 @@ export const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_
 
 
 export const mediaElementSources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
-export let previousAudioSource: MediaElementAudioSourceNode | null = null;
-
 export let lastPlayedElement: HTMLMediaElement | null = null;
 export function setLastPlayedElement(el: HTMLMediaElement | null) {
     lastPlayedElement = el;
@@ -30,7 +28,6 @@ export function getLastPlayedElement() {
 }
 
 export let appliedFilters: BiquadFilterNode[] = [];
-
 
 
 // MARK: updateFilters
@@ -47,94 +44,109 @@ export function updateFilters(filters: any[]) {
 }
 
 
-
 // MARK: applyEqualizer
 export function applyEqualizer(ae_audioElement: HTMLMediaElement) {
-    devLog('[applyEqualizer]');
+    devLog('[applyEqualizer] element:', ae_audioElement);
+
+    // AudioContext must be resumed after user gesture
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => devLog('[applyEqualizer] AudioContext resumed'));
+    }
 
     let audioSource: MediaElementAudioSourceNode;
 
     if (mediaElementSources.has(ae_audioElement)) {
-        devLog('MediaElementSourceNode already connected');
         audioSource = mediaElementSources.get(ae_audioElement)!;
-
     } else {
-        devLog('MediaElementSourceNode not found, creating new one');
-        audioSource = audioContext.createMediaElementSource(ae_audioElement);
-        mediaElementSources.set(ae_audioElement, audioSource); // save source to weakmap
+        devLog('[applyEqualizer] creating new MediaElementSourceNode');
+        try {
+            audioSource = audioContext.createMediaElementSource(ae_audioElement);
+            mediaElementSources.set(ae_audioElement, audioSource);
+        } catch (e) {
+            console.warn('[applyEqualizer] Failed to create MediaElementSourceNode (possibly cross-origin):', e);
+            return;
+        }
     }
 
-    devLog('previousAudioSource', previousAudioSource);
-    if (previousAudioSource) {
-        previousAudioSource.disconnect();
+    // Ensure the filter chain itself is connected to destination
+    setupFilterChain();
+
+    // Re-route this source through the filters
+    try {
+        audioSource.disconnect();
+        audioSource.connect(equalizerFilters[0]);
+        devLog('[applyEqualizer] Equalizer applied and connected to filter chain');
+    } catch (e) {
+        console.warn('[applyEqualizer] Error connecting source node:', e);
     }
-
-    devLog('mediaElementSources', mediaElementSources);
-
-
-    appliedFilters.forEach((filter) => filter.disconnect());
-    appliedFilters = [];
-
-
-    let currentNode: AudioNode = audioSource;
-    for (const filter of equalizerFilters) {
-        // devLog('Connecting filter', filter);
-        currentNode.connect(filter);
-        appliedFilters.push(filter);
-        currentNode = filter;
-    }
-    devLog('appliedFilters', appliedFilters);
-    
-    currentNode.connect(audioContext.destination);
-    // Connect to analyser before destination
-    // currentNode.connect(analyser);
-    // analyser.connect(audioContext.destination);
-
-    devLog('Equalizer applied');
-
-    previousAudioSource = audioSource;
 }
 
 
 // MARK: disableEqualizer
 export function disableEqualizer(audioElement: HTMLMediaElement) {
-    devLog('disableEqualizer');
-    // Disconnect filters
-    appliedFilters.forEach((filter) => filter.disconnect());
-    appliedFilters = [];
-    // Reconnect source directly to destination
+    devLog('[disableEqualizer] element:', audioElement);
+    
     if (audioElement && mediaElementSources.has(audioElement)) {
         const sourceNode = mediaElementSources.get(audioElement)!;
         try {
-            devLog('[disableEqualizer] Reconnecting sourceNode directly to destination');
             sourceNode.disconnect();
-
             sourceNode.connect(audioContext.destination);
-            // Still connect through analyser even if EQ is disabled, so visualizer works
-            // sourceNode.connect(analyser);
-            // analyser.connect(audioContext.destination);
-            
+            devLog('[disableEqualizer] Reconnected sourceNode directly to destination');
         } catch (e) {
             console.warn('[disableEqualizer] Error reconnecting sourceNode:', e);
         }
     }
 }
 
+let filterChainInitialized = false;
+function setupFilterChain() {
+    if (filterChainInitialized) return;
+
+    devLog('[setupFilterChain] Connecting filter chain...');
+
+    for (let i = 0; i < equalizerFilters.length; i++) {
+        const filter = equalizerFilters[i];
+        const nextFilter = equalizerFilters[i + 1];
+        
+        filter.disconnect(); // Clear previous
+        if (nextFilter) {
+            filter.connect(nextFilter);
+        } else {
+            filter.connect(audioContext.destination);
+        }
+    }
+    appliedFilters = [...equalizerFilters];
+    filterChainInitialized = true;
+}
+
 
 // MARK: applyEQIfPlaying
 export function applyEQIfPlaying(eqEnabled: boolean) {
-    devLog('applyEQIfPlaying');
+    devLog('applyEQIfPlaying', eqEnabled);
     const audios = document.querySelectorAll<HTMLMediaElement>('audio, video');
     audios.forEach(audio => {
         if (!audio.paused && !audio.ended && audio.readyState > 2) {
-            lastPlayedElement = audio;
             if (eqEnabled) {
-                devLog('[applyEQIfPlaying] Applying EQ to currently playing element');
                 applyEqualizer(audio);
-            // } else {
-            //      // Even if EQ is disabled, we might want to attach for visualizer if we want it always on
-            //      disableEqualizer(audio);
+            } else {
+                disableEqualizer(audio);
             }
+        }
+    });
+}
+
+/**
+ * Toggles the EQ for all currently present elements.
+ */
+// MARK: toggleEQForAll
+export function toggleEQForAll(enabled: boolean) {
+    devLog('toggleEQForAll:', enabled);
+    const audios = document.querySelectorAll<HTMLMediaElement>('audio, video');
+    audios.forEach(el => {
+        if (enabled) {
+            applyEqualizer(el);
+        } else {
+            disableEqualizer(el);
         }
     });
 }

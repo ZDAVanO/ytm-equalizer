@@ -11,9 +11,9 @@ import {
   disableEqualizer,
   applyEQIfPlaying,
   equalizerFilters,
-  appliedFilters,
-  lastPlayedElement,
+  // lastPlayedElement,
   setLastPlayedElement,
+  toggleEQForAll,
   // getLastPlayedElement
 } from './equalizer';
 
@@ -24,12 +24,33 @@ console.log('[content] YTM Equalizer Extension loaded');
 let eqEnabled = false;
 let eqBtn: HTMLButtonElement | null = null;
 
+devLog('[content] hostname:', window.location.hostname);
 if (window.location.hostname === 'music.youtube.com') {
     devLog('[content] Detected YouTube Music domain, inserting EQ button');
     eqBtn = insertEQButton(() => {
         chrome.runtime.sendMessage({ action: "open_popup" });
     });
 }
+
+// Global media element observer to catch dynamically added videos/audios
+const mediaObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+        mutation.addedNodes.forEach(node => {
+            if (node instanceof HTMLMediaElement) {
+                devLog('[mediaObserver] New media element found:', node);
+                if (eqEnabled) applyEqualizer(node);
+            } else if (node instanceof HTMLElement) {
+                const media = node.querySelectorAll('audio, video');
+                media.forEach(m => {
+                    devLog('[mediaObserver] New nested media found:', m);
+                    if (eqEnabled) applyEqualizer(m as HTMLMediaElement);
+                });
+            }
+        });
+    }
+});
+mediaObserver.observe(document.body, { childList: true, subtree: true });
+
 
 // MARK: Initial load from storage
 chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
@@ -43,30 +64,22 @@ chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
     }
 
     updateEQBtnVisual(eqBtn, eqEnabled);
-
     applyEQIfPlaying(eqEnabled);
 });
 
 
 // React to storage changes (all tabs update EQ automatically)
 chrome.storage.onChanged.addListener((changes, area) => {
-    devLog('[content] storage.onChanged detected:', changes, area);
+    if (area !== 'local') return;
+    devLog('[content] storage.onChanged detected:', changes);
 
     // Handle eqEnabled changes
     if (changes.eqEnabled) {
         eqEnabled = !!changes.eqEnabled.newValue;
-
         devLog('[content] eqEnabled changed:', eqEnabled);
 
         updateEQBtnVisual(eqBtn, eqEnabled);
-
-        if (lastPlayedElement) {
-            if (eqEnabled) {
-                applyEqualizer(lastPlayedElement);
-            } else {
-                disableEqualizer(lastPlayedElement);
-            }
-        }
+        toggleEQForAll(eqEnabled);
     }
 
     // Handle direct filter changes
@@ -82,18 +95,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 // MARK: Listen for play events
 document.addEventListener('play', function (e) {
-    // lastPlayedElement = e.target as HTMLMediaElement;
-    setLastPlayedElement(e.target as HTMLMediaElement);
+    const target = e.target as HTMLMediaElement;
+    setLastPlayedElement(target);
+    
     if (eqEnabled) {
-        if (lastPlayedElement === e.target && appliedFilters.length > 0) {
-            // Already applied
-            devLog('[addEventListener play] Equalizer already applied to this element');
-        } else {
-            applyEqualizer(e.target as HTMLMediaElement);
-        }
-    // } else {
-    //     // If EQ disabled, ensure visualizer is connected
-    //     disableEqualizer(e.target as HTMLMediaElement);
+        applyEqualizer(target);
+    } else {
+        // We don't necessarily need to attach if disabled, 
+        // but if it was previously attached, we should ensure it's in the right state.
+        disableEqualizer(target);
     }
 }, true);
 

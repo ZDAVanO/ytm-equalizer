@@ -18,7 +18,7 @@ import {
 } from './equalizer';
 
 
-console.log('[content] YTM Equalizer Extension loaded');
+console.log('[content] Web Equalizer Extension loaded');
 
 
 let eqEnabled = false;

@@ -1,8 +1,8 @@
 {
-  "name": "ytm-equalizer",
+  "name": "web-equalizer",
   "type": "module",
   "version": "1.0.0",
-  "description": "Equalizer extension for YouTube Music.",
+  "description": "Equalizer extension.",
   "private": true,
   "scripts": {
     "dev": "vite",

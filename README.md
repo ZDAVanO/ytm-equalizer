@@ -1,2 +1,3 @@
-# ytm-equalizer
-An equalizer extension for YouTube Music.
+# web-equalizer
+
+An equalizer extension.

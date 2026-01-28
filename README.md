@@ -26,8 +26,6 @@ A powerful 10-band audio equalizer extension for Google Chrome that works on any
 2.  Install dependencies:
     ```bash
     npm install
-    # or
-    npm ci
     ```
 
 3.  Build the extension:
@@ -54,8 +52,3 @@ npm run dev
 - **Vite**: Fast tooling and build system.
 - **TypeScript**: For type-safe code.
 - **@crxjs/vite-plugin**: Seamless Vite integration for Chrome Extensions.
-- **Web Audio API**: The core technology behind the equalization.
-
-## License
-
-[MIT](LICENSE)

@@ -7,6 +7,7 @@ import { insertEQButton, updateEQBtnVisual } from './eqButton';
 
 import {
   updateFilters,
+  updateVolume,
   applyEqualizer,
   disableEqualizer,
   applyEQIfPlaying,
@@ -53,7 +54,7 @@ mediaObserver.observe(document.body, { childList: true, subtree: true });
 
 
 // MARK: Initial load from storage
-chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
+chrome.storage.local.get(['eqEnabled', 'currentFilters', 'volume'], (data) => {
     eqEnabled = !!data.eqEnabled;
     devLog('[content] eqEnabled state on load:', eqEnabled);
 
@@ -61,6 +62,12 @@ chrome.storage.local.get(['eqEnabled', 'currentFilters'], (data) => {
     if (Array.isArray(data.currentFilters) && data.currentFilters.length === equalizerFilters.length) {
         updateFilters(data.currentFilters);
         devLog('[content] Loaded currentFilters from storage:', data.currentFilters);
+    }
+
+    // Load volume
+    if (typeof data.volume === 'number') {
+        updateVolume(data.volume);
+        devLog('[content] Loaded volume from storage:', data.volume);
     }
 
     updateEQBtnVisual(eqBtn, eqEnabled);
@@ -90,7 +97,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
             updateFilters(newFilters);
         }
     }
+
+    // Handle volume changes
+    if (changes.volume) {
+        devLog('[content] volume changed:', changes.volume.newValue);
+        if (typeof changes.volume.newValue === 'number') {
+            updateVolume(changes.volume.newValue);
+        }
+    }
 });
+
+
 
 
 // MARK: Listen for play events

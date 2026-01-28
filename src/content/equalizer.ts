@@ -17,6 +17,8 @@ export const equalizerFilters: BiquadFilterNode[] = Array.from({ length: FILTER_
     return filter;
 });
 
+export const gainNode = audioContext.createGain();
+gainNode.gain.value = 1.0;
 
 export const mediaElementSources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
 export let lastPlayedElement: HTMLMediaElement | null = null;
@@ -41,6 +43,14 @@ export function updateFilters(filters: any[]) {
             filter.gain.value = band.gain || 0;
         }
     });
+}
+
+// MARK: updateVolume
+export function updateVolume(volume: number) {
+    devLog('[updateVolume] volume:', volume);
+    // Use setTargetAtTime for smoother transitions if needed, 
+    // but direct assignment is usually fine for simple sliders.
+    gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.01);
 }
 
 
@@ -112,9 +122,15 @@ function setupFilterChain() {
         if (nextFilter) {
             filter.connect(nextFilter);
         } else {
-            filter.connect(audioContext.destination);
+            // Last filter connects to gainNode
+            filter.connect(gainNode);
         }
     }
+    
+    // Connect gainNode to destination
+    gainNode.disconnect();
+    gainNode.connect(audioContext.destination);
+
     appliedFilters = [...equalizerFilters];
     filterChainInitialized = true;
 }
@@ -150,3 +166,4 @@ export function toggleEQForAll(enabled: boolean) {
         }
     });
 }
+

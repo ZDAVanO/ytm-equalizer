@@ -5,6 +5,7 @@ import * as Constants from "@constants";
 import defaultPresets, { presetDisplayNames } from "./defaultPresets";
 import { StorageService } from "./services/StorageService";
 import { Slider } from "./components/Slider";
+import { VolumeSlider } from "./components/VolumeSlider";
 import { SliderConfig, FilterPreset } from "./types";
 
 const slidersConfig: SliderConfig[] = [
@@ -33,6 +34,8 @@ class PopupManager {
   private modalSaveBtn!: HTMLButtonElement;
   private modalCancelBtn!: HTMLButtonElement;
   private presetNameInput!: HTMLInputElement;
+  private volumeSlider!: HTMLInputElement;
+  private volumeInput!: HTMLInputElement;
 
   constructor() {
     this.initHTML();
@@ -71,6 +74,8 @@ class PopupManager {
           }" type="button">Delete</button>
         </div>
         <div class="sliders-row">
+          ${VolumeSlider(Constants.VOLUME_SLIDER_ID, Constants.VOLUME_INPUT_ID)}
+          <div class="vertical-divider"></div>
           ${slidersConfig.map((cfg) => Slider(cfg.idx, cfg.freq)).join("")}
         </div>
         <dialog id="${Constants.PRESET_MODAL_ID}" class="modal" closedby="any">
@@ -127,6 +132,12 @@ class PopupManager {
     ) as HTMLButtonElement;
     this.presetNameInput = document.getElementById(
       Constants.PRESET_NAME_INPUT_ID
+    ) as HTMLInputElement;
+    this.volumeSlider = document.getElementById(
+      Constants.VOLUME_SLIDER_ID
+    ) as HTMLInputElement;
+    this.volumeInput = document.getElementById(
+      Constants.VOLUME_INPUT_ID
     ) as HTMLInputElement;
   }
 
@@ -218,6 +229,33 @@ class PopupManager {
         handleWheel(e, sliderElem, 0.05, -12, 12)
       );
     });
+
+    // Volume Events
+    this.volumeSlider.oninput = () => {
+      this.volumeInput.value = parseFloat(this.volumeSlider.value).toFixed(2);
+      this.handleVolumeChanges();
+    };
+
+    this.volumeInput.addEventListener("input", () => {
+      let val = parseFloat(this.volumeInput.value);
+      if (isNaN(val)) val = 1.0;
+      val = Math.max(0, Math.min(6, val));
+      this.volumeSlider.value = val.toString();
+      this.handleVolumeChanges();
+    });
+
+    const handleVolumeWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      let val = parseFloat(this.volumeSlider.value);
+      val += e.deltaY < 0 ? 0.05 : -0.05;
+      val = Math.max(0, Math.min(6, Math.round(val * 100) / 100));
+      this.volumeSlider.value = val.toString();
+      this.volumeInput.value = val.toFixed(2);
+      this.handleVolumeChanges();
+    };
+
+    this.volumeSlider.addEventListener("wheel", handleVolumeWheel);
+    this.volumeInput.addEventListener("wheel", handleVolumeWheel);
   }
 
   private async loadData() {
@@ -232,6 +270,10 @@ class PopupManager {
     const eqEnabled = await StorageService.getEqEnabled();
     this.updateEqToggleUI(eqEnabled);
     this.updateDeleteButtonState();
+
+    const volume = await StorageService.getVolume();
+    this.volumeSlider.value = volume.toString();
+    this.volumeInput.value = volume.toFixed(2);
   }
 
   private updatePresetsSelector() {
@@ -373,6 +415,11 @@ class PopupManager {
   private handleEqChanges() {
     this.autosavePreset();
     this.updateCurrentFilters();
+  }
+
+  private handleVolumeChanges() {
+    const vol = parseFloat(this.volumeSlider.value);
+    StorageService.setVolume(vol);
   }
 
   private async autosavePreset() {

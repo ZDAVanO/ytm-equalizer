@@ -33,4 +33,14 @@ export class StorageService {
     devLog('[StorageService] setCurrentFilters:', filters);
     await chrome.storage.local.set({ currentFilters: filters });
   }
+
+  static async getVolume(): Promise<number> {
+    const data = await chrome.storage.local.get("volume");
+    return typeof data.volume === "number" ? data.volume : 1.0;
+  }
+
+  static async setVolume(volume: number): Promise<void> {
+    await chrome.storage.local.set({ volume });
+  }
 }
+

@@ -166,6 +166,18 @@ button:focus-visible {
   height: 24px;
 }
 
+.current-site-label {
+  color: #919191;
+  background: #1a1a1a;
+  padding: 4px 10px;
+  border-radius: 6px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
 
 .sliders-row {
   display: flex;

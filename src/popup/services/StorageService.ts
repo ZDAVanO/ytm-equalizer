@@ -34,13 +34,21 @@ export class StorageService {
     await chrome.storage.local.set({ currentFilters: filters });
   }
 
-  static async getVolume(): Promise<number> {
-    const data = await chrome.storage.local.get("volume");
-    return typeof data.volume === "number" ? data.volume : 1.0;
+  static async getVolume(hostname: string): Promise<number> {
+    const data = await chrome.storage.local.get("siteVolumes");
+    const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
+    return typeof siteVolumes[hostname] === "number" ? siteVolumes[hostname] : 1.0;
   }
 
-  static async setVolume(volume: number): Promise<void> {
-    await chrome.storage.local.set({ volume });
+
+  static async setVolume(hostname: string, volume: number): Promise<void> {
+    const data = await chrome.storage.local.get("siteVolumes");
+    const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
+    siteVolumes[hostname] = volume;
+    await chrome.storage.local.set({ siteVolumes });
   }
 }
+
+
+
 

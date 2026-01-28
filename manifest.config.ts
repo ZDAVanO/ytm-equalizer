@@ -30,7 +30,9 @@ export default defineManifest({
   }],
   permissions: [
     'storage',
+    'tabs',
   ],
+
   background: {
     service_worker: 'src/background/main.ts',
     type: 'module',

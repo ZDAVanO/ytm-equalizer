@@ -54,7 +54,7 @@ mediaObserver.observe(document.body, { childList: true, subtree: true });
 
 
 // MARK: Initial load from storage
-chrome.storage.local.get(['eqEnabled', 'currentFilters', 'volume'], (data) => {
+chrome.storage.local.get(['eqEnabled', 'currentFilters', 'siteVolumes'], (data) => {
     eqEnabled = !!data.eqEnabled;
     devLog('[content] eqEnabled state on load:', eqEnabled);
 
@@ -64,11 +64,16 @@ chrome.storage.local.get(['eqEnabled', 'currentFilters', 'volume'], (data) => {
         devLog('[content] Loaded currentFilters from storage:', data.currentFilters);
     }
 
-    // Load volume
-    if (typeof data.volume === 'number') {
-        updateVolume(data.volume);
-        devLog('[content] Loaded volume from storage:', data.volume);
+    // Load site-specific volume
+    const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
+    const volume = siteVolumes[window.location.hostname];
+    if (typeof volume === 'number') {
+        updateVolume(volume);
+        devLog('[content] Loaded site volume from storage:', volume);
+    } else {
+        updateVolume(1.0); // Default if not set
     }
+
 
     updateEQBtnVisual(eqBtn, eqEnabled);
     applyEQIfPlaying(eqEnabled);
@@ -98,14 +103,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
         }
     }
 
-    // Handle volume changes
-    if (changes.volume) {
-        devLog('[content] volume changed:', changes.volume.newValue);
-        if (typeof changes.volume.newValue === 'number') {
-            updateVolume(changes.volume.newValue);
+    // Handle site-specific volume changes
+    if (changes.siteVolumes) {
+        const newSiteVolumes: Record<string, number> = (changes.siteVolumes.newValue as Record<string, number>) || {};
+        const volume = newSiteVolumes[window.location.hostname];
+        if (typeof volume === 'number') {
+            devLog('[content] site volume changed:', volume);
+            updateVolume(volume);
         }
     }
 });
+
 
 
 

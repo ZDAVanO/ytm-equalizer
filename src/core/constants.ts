@@ -13,8 +13,10 @@ export const MODAL_CANCEL_BTN_ID: string = "modal-cancel-btn";
 export const PRESET_NAME_INPUT_ID: string = "preset-name-input";
 export const VOLUME_SLIDER_ID: string = "volume-slider";
 export const VOLUME_INPUT_ID: string = "volume-input";
+export const VOLUME_RESET_BTN_ID: string = "volume-reset-btn";
 
 export const NAV_BAR_SELECTOR: string = '#right-content.right-content.style-scope.ytmusic-nav-bar';
+
 
 
 export const SONG_IMAGE_SELECTOR: string = '#song-image>#thumbnail>#img';

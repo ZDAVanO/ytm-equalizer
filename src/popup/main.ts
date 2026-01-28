@@ -36,6 +36,7 @@ class PopupManager {
   private presetNameInput!: HTMLInputElement;
   private volumeSlider!: HTMLInputElement;
   private volumeInput!: HTMLInputElement;
+  private volumeResetBtn!: HTMLButtonElement;
 
   constructor() {
     this.initHTML();
@@ -139,6 +140,9 @@ class PopupManager {
     this.volumeInput = document.getElementById(
       Constants.VOLUME_INPUT_ID
     ) as HTMLInputElement;
+    this.volumeResetBtn = document.getElementById(
+      Constants.VOLUME_RESET_BTN_ID
+    ) as HTMLButtonElement;
   }
 
   private initEventListeners() {
@@ -232,30 +236,43 @@ class PopupManager {
 
     // Volume Events
     this.volumeSlider.oninput = () => {
-      this.volumeInput.value = parseFloat(this.volumeSlider.value).toFixed(2);
-      this.handleVolumeChanges();
+      const pos = parseFloat(this.volumeSlider.value);
+      const gain = 6 * Math.pow(pos, 2.585);
+      this.volumeInput.value = gain.toFixed(2);
+      this.handleVolumeChanges(gain);
     };
 
     this.volumeInput.addEventListener("input", () => {
-      let val = parseFloat(this.volumeInput.value);
-      if (isNaN(val)) val = 1.0;
-      val = Math.max(0, Math.min(6, val));
-      this.volumeSlider.value = val.toString();
-      this.handleVolumeChanges();
+      let gain = parseFloat(this.volumeInput.value);
+      if (isNaN(gain)) gain = 1.0;
+      gain = Math.max(0, Math.min(6, gain));
+      const pos = Math.pow(gain / 6, 1 / 2.585);
+      this.volumeSlider.value = pos.toString();
+      this.handleVolumeChanges(gain);
     });
 
     const handleVolumeWheel = (e: WheelEvent) => {
       e.preventDefault();
-      let val = parseFloat(this.volumeSlider.value);
-      val += e.deltaY < 0 ? 0.05 : -0.05;
-      val = Math.max(0, Math.min(6, Math.round(val * 100) / 100));
-      this.volumeSlider.value = val.toString();
-      this.volumeInput.value = val.toFixed(2);
-      this.handleVolumeChanges();
+      let pos = parseFloat(this.volumeSlider.value);
+      pos += e.deltaY < 0 ? 0.01 : -0.01;
+      pos = Math.max(0, Math.min(1, pos));
+      this.volumeSlider.value = pos.toString();
+
+      const gain = 6 * Math.pow(pos, 2.585);
+      this.volumeInput.value = gain.toFixed(2);
+      this.handleVolumeChanges(gain);
     };
 
     this.volumeSlider.addEventListener("wheel", handleVolumeWheel);
     this.volumeInput.addEventListener("wheel", handleVolumeWheel);
+
+    this.volumeResetBtn.addEventListener("click", () => {
+      const gain = 1.0;
+      const pos = 0.5; // Centers perfectly now
+      this.volumeSlider.value = pos.toString();
+      this.volumeInput.value = gain.toFixed(2);
+      this.handleVolumeChanges(gain);
+    });
   }
 
   private async loadData() {
@@ -272,7 +289,8 @@ class PopupManager {
     this.updateDeleteButtonState();
 
     const volume = await StorageService.getVolume();
-    this.volumeSlider.value = volume.toString();
+    const pos = Math.pow(volume / 6, 1 / 2.585);
+    this.volumeSlider.value = pos.toString();
     this.volumeInput.value = volume.toFixed(2);
   }
 
@@ -417,8 +435,11 @@ class PopupManager {
     this.updateCurrentFilters();
   }
 
-  private handleVolumeChanges() {
-    const vol = parseFloat(this.volumeSlider.value);
+  private handleVolumeChanges(gain?: number) {
+    const vol =
+      gain !== undefined
+        ? gain
+        : 6 * Math.pow(parseFloat(this.volumeSlider.value), 2.585);
     StorageService.setVolume(vol);
   }
 

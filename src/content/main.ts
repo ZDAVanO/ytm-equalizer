@@ -24,6 +24,25 @@ console.log('[content] Web Equalizer Extension loaded');
 
 let eqEnabled = false;
 let eqBtn: HTMLButtonElement | null = null;
+let currentHostname = window.location.hostname;
+
+// Get the top-level hostname to handle iframes correctly
+chrome.runtime.sendMessage({ action: "get_tab_hostname" }, (response) => {
+    if (response && response.hostname) {
+        currentHostname = response.hostname;
+        devLog('[content] Updated to tab hostname:', currentHostname);
+        
+        // Refresh volume with the correct hostname immediately after update
+        chrome.storage.local.get(['siteVolumes'], (data) => {
+            const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
+            const volume = siteVolumes[currentHostname];
+            if (typeof volume === 'number') {
+                updateVolume(volume);
+                devLog('[content] Re-loaded site volume for:', currentHostname, volume);
+            }
+        });
+    }
+});
 
 devLog('[content] hostname:', window.location.hostname);
 if (window.location.hostname === 'music.youtube.com') {
@@ -66,7 +85,7 @@ chrome.storage.local.get(['eqEnabled', 'currentFilters', 'siteVolumes'], (data) 
 
     // Load site-specific volume
     const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
-    const volume = siteVolumes[window.location.hostname];
+    const volume = siteVolumes[currentHostname];
     if (typeof volume === 'number') {
         updateVolume(volume);
         devLog('[content] Loaded site volume from storage:', volume);
@@ -106,7 +125,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     // Handle site-specific volume changes
     if (changes.siteVolumes) {
         const newSiteVolumes: Record<string, number> = (changes.siteVolumes.newValue as Record<string, number>) || {};
-        const volume = newSiteVolumes[window.location.hostname];
+        const volume = newSiteVolumes[currentHostname];
         if (typeof volume === 'number') {
             devLog('[content] site volume changed:', volume);
             updateVolume(volume);

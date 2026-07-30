@@ -3,7 +3,11 @@ export const EQ_BTN: string = "eq-toggle-btn";
 
 // Equalizer UI Element IDs
 export const EQ_TOGGLE_BTN_ID: string = "eq-toggle-btn";
+export const EQ_DROPDOWN_BTN_ID: string = "eq-dropdown-btn";
+export const EQ_DROPDOWN_MENU_ID: string = "eq-dropdown-menu";
+export const TOGGLE_CURRENT_SITE_BTN_ID: string = "toggle-current-site-btn";
 export const PRESETS_SELECT_ID: string = "presets-select";
+
 export const SAVE_PRESET_BTN_ID: string = "save-preset-btn";
 export const DELETE_PRESET_BTN_ID: string = "delete-preset-btn";
 export const PRESET_MODAL_ID: string = "preset-modal";

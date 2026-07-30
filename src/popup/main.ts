@@ -3,10 +3,10 @@ import ytm_eq_icon from "@/assets/icon-128.png";
 import { version } from "../../package.json";
 import * as Constants from "@constants";
 import defaultPresets, { presetDisplayNames } from "./defaultPresets";
-import { StorageService } from "./services/StorageService";
+import { StorageService, matchesDomain } from "./services/StorageService";
 import { Slider } from "./components/Slider";
 import { VolumeSlider } from "./components/VolumeSlider";
-import { SliderConfig, FilterPreset } from "./types";
+import { SliderConfig, FilterPreset, FilterMode } from "./types";
 
 const slidersConfig: SliderConfig[] = [
   { idx: 1, freq: 32 },
@@ -26,6 +26,10 @@ const CUSTOM_PRESET_NAME = "[Custom]";
 class PopupManager {
   private userPresets: FilterPreset[] = [];
   private eqToggle!: HTMLButtonElement;
+  private eqDropdownBtn!: HTMLButtonElement;
+  private eqDropdownMenu!: HTMLDivElement;
+  private toggleCurrentSiteBtn!: HTMLButtonElement;
+
   private presetsSelect!: HTMLSelectElement;
   private savePresetBtn!: HTMLButtonElement;
   private deletePresetBtn!: HTMLButtonElement;
@@ -37,7 +41,30 @@ class PopupManager {
   private volumeSlider!: HTMLInputElement;
   private volumeInput!: HTMLInputElement;
   private volumeResetBtn!: HTMLButtonElement;
+
+  // Site Lists Tab Elements
+  private settingsFilterModeBlocklist!: HTMLInputElement;
+  private settingsFilterModeAllowlist!: HTMLInputElement;
+  private currentSiteStatusBadge!: HTMLSpanElement;
+  private currentSiteDomainDisplay!: HTMLSpanElement;
+  private settingsToggleCurrentBtn!: HTMLButtonElement;
+
+  private addBlocklistInput!: HTMLInputElement;
+  private addBlocklistBtn!: HTMLButtonElement;
+  private blocklistItemsContainer!: HTMLDivElement;
+  private blocklistCountSpan!: HTMLSpanElement;
+
+  private addAllowlistInput!: HTMLInputElement;
+  private addAllowlistBtn!: HTMLButtonElement;
+  private allowlistItemsContainer!: HTMLDivElement;
+  private allowlistCountSpan!: HTMLSpanElement;
+
+  // State
   private currentHostname: string = "";
+  private eqEnabled: boolean = false;
+  private filterMode: FilterMode = "blocklist";
+  private blockList: string[] = [];
+  private allowList: string[] = [];
 
   constructor() {
     this.initHTML();
@@ -66,13 +93,44 @@ class PopupManager {
 
       <nav class="tabs-nav">
         <button class="tab-btn active" data-tab="equalizer">Equalizer</button>
+        <button class="tab-btn" data-tab="sitelists">Site Lists</button>
         <button class="tab-btn" data-tab="settings">Settings</button>
       </nav>
 
       <div id="tab-equalizer" class="tab-content active">
         <div>
           <div class="card">
-            <button id="${Constants.EQ_TOGGLE_BTN_ID}" type="button">Equalizer</button>
+            <!-- Split Button -->
+            <div class="split-btn-group">
+              <button id="${Constants.EQ_TOGGLE_BTN_ID}" type="button" class="split-btn-main">Equalizer</button>
+              <button id="${Constants.EQ_DROPDOWN_BTN_ID}" type="button" class="split-btn-arrow" title="Filter Options">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                  <path d="M7 10l5 5 5-5z"/>
+                </svg>
+              </button>
+              <div id="${Constants.EQ_DROPDOWN_MENU_ID}" class="filter-dropdown-menu hidden">
+                <div class="dropdown-header">Filter Mode</div>
+                <label class="dropdown-item">
+                  <input type="radio" name="popFilterMode" value="blocklist" id="pop-mode-blocklist" />
+                  <div class="mode-info">
+                    <span class="mode-title">🛡️ Blocklist Mode</span>
+                    <span class="mode-desc">Active on all sites except blocked</span>
+                  </div>
+                </label>
+                <label class="dropdown-item">
+                  <input type="radio" name="popFilterMode" value="allowlist" id="pop-mode-allowlist" />
+                  <div class="mode-info">
+                    <span class="mode-title">🎯 Allowlist Mode</span>
+                    <span class="mode-desc">Active ONLY on allowed sites</span>
+                  </div>
+                </label>
+                <div class="dropdown-divider"></div>
+                <button type="button" id="${Constants.TOGGLE_CURRENT_SITE_BTN_ID}" class="dropdown-action-btn">
+                  Block current site
+                </button>
+              </div>
+            </div>
+
             <select id="${Constants.PRESETS_SELECT_ID}"></select>
             <button id="${Constants.SAVE_PRESET_BTN_ID}" type="button">New</button>
             <button id="${Constants.DELETE_PRESET_BTN_ID}" type="button">Delete</button>
@@ -85,7 +143,82 @@ class PopupManager {
         </div>
       </div>
 
+      <div id="tab-sitelists" class="tab-content">
+        <div class="settings-container">
+          
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-card-title">Equalizer Mode Selection</span>
+            </div>
+            <div class="mode-selector-group">
+              <label class="mode-card-option" id="label-mode-blocklist">
+                <input type="radio" name="setFilterMode" value="blocklist" id="set-mode-blocklist" />
+                <div class="mode-card-content">
+                  <span class="mode-card-name">🛡️ Blocklist Mode</span>
+                  <span class="mode-card-detail">Equalizer runs on all websites EXCEPT those listed in Blocklist below. (Allowlist is ignored).</span>
+                </div>
+              </label>
+              <label class="mode-card-option" id="label-mode-allowlist">
+                <input type="radio" name="setFilterMode" value="allowlist" id="set-mode-allowlist" />
+                <div class="mode-card-content">
+                  <span class="mode-card-name">🎯 Allowlist Mode</span>
+                  <span class="mode-card-detail">Equalizer runs ONLY on websites listed in Allowlist below. (Blocklist is ignored).</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-card-title">Current Site Control</span>
+              <span id="current-site-status-badge" class="status-badge">...</span>
+            </div>
+            <div class="current-site-action-row">
+              <span id="current-site-domain-display" class="site-domain-text">domain.com</span>
+              <button id="settings-toggle-current-btn" type="button" class="settings-action-btn">Toggle site</button>
+            </div>
+          </div>
+
+          <div class="settings-two-columns">
+            <div class="settings-card col">
+              <div class="settings-card-header">
+                <span class="settings-card-title">🛡️ Blocklist (<span id="blocklist-count">0</span>)</span>
+              </div>
+              <div class="add-domain-row">
+                <input type="text" id="add-blocklist-input" placeholder="e.g. spotify.com" />
+                <button type="button" id="add-blocklist-btn" class="add-btn">Add</button>
+              </div>
+              <div id="blocklist-items" class="domain-list"></div>
+            </div>
+
+            <div class="settings-card col">
+              <div class="settings-card-header">
+                <span class="settings-card-title">🎯 Allowlist (<span id="allowlist-count">0</span>)</span>
+              </div>
+              <div class="add-domain-row">
+                <input type="text" id="add-allowlist-input" placeholder="e.g. youtube.com" />
+                <button type="button" id="add-allowlist-btn" class="add-btn">Add</button>
+              </div>
+              <div id="allowlist-items" class="domain-list"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <div id="tab-settings" class="tab-content">
+        <div class="settings-container">
+          <div class="settings-card">
+            <div class="settings-card-header">
+              <span class="settings-card-title">General Extension Settings</span>
+            </div>
+            <div class="general-settings-content">
+              <p class="general-settings-info">
+                Web Equalizer version ${version}.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <dialog id="${Constants.PRESET_MODAL_ID}" class="modal" closedby="any">
@@ -110,6 +243,16 @@ class PopupManager {
     this.eqToggle = document.getElementById(
       Constants.EQ_TOGGLE_BTN_ID
     ) as HTMLButtonElement;
+    this.eqDropdownBtn = document.getElementById(
+      Constants.EQ_DROPDOWN_BTN_ID
+    ) as HTMLButtonElement;
+    this.eqDropdownMenu = document.getElementById(
+      Constants.EQ_DROPDOWN_MENU_ID
+    ) as HTMLDivElement;
+    this.toggleCurrentSiteBtn = document.getElementById(
+      Constants.TOGGLE_CURRENT_SITE_BTN_ID
+    ) as HTMLButtonElement;
+
     this.presetsSelect = document.getElementById(
       Constants.PRESETS_SELECT_ID
     ) as HTMLSelectElement;
@@ -143,13 +286,107 @@ class PopupManager {
     this.volumeResetBtn = document.getElementById(
       Constants.VOLUME_RESET_BTN_ID
     ) as HTMLButtonElement;
+
+    // Site Lists Elements
+    this.settingsFilterModeBlocklist = document.getElementById(
+      "set-mode-blocklist"
+    ) as HTMLInputElement;
+    this.settingsFilterModeAllowlist = document.getElementById(
+      "set-mode-allowlist"
+    ) as HTMLInputElement;
+
+    this.currentSiteStatusBadge = document.getElementById(
+      "current-site-status-badge"
+    ) as HTMLSpanElement;
+    this.currentSiteDomainDisplay = document.getElementById(
+      "current-site-domain-display"
+    ) as HTMLSpanElement;
+    this.settingsToggleCurrentBtn = document.getElementById(
+      "settings-toggle-current-btn"
+    ) as HTMLButtonElement;
+
+    this.addBlocklistInput = document.getElementById(
+      "add-blocklist-input"
+    ) as HTMLInputElement;
+    this.addBlocklistBtn = document.getElementById(
+      "add-blocklist-btn"
+    ) as HTMLButtonElement;
+    this.blocklistItemsContainer = document.getElementById(
+      "blocklist-items"
+    ) as HTMLDivElement;
+    this.blocklistCountSpan = document.getElementById(
+      "blocklist-count"
+    ) as HTMLSpanElement;
+
+    this.addAllowlistInput = document.getElementById(
+      "add-allowlist-input"
+    ) as HTMLInputElement;
+    this.addAllowlistBtn = document.getElementById(
+      "add-allowlist-btn"
+    ) as HTMLButtonElement;
+    this.allowlistItemsContainer = document.getElementById(
+      "allowlist-items"
+    ) as HTMLDivElement;
+    this.allowlistCountSpan = document.getElementById(
+      "allowlist-count"
+    ) as HTMLSpanElement;
   }
 
   private initEventListeners() {
     this.eqToggle.addEventListener("click", () => this.toggleEq());
-    this.presetsSelect.addEventListener("change", () =>
-      this.handlePresetChange()
-    );
+
+    // Split button dropdown toggle
+    this.eqDropdownBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.eqDropdownMenu.classList.toggle("hidden");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!this.eqDropdownMenu.contains(e.target as Node) && e.target !== this.eqDropdownBtn) {
+        this.eqDropdownMenu.classList.add("hidden");
+      }
+    });
+
+    // Dropdown Mode selection
+    const popBlocklistRadio = document.getElementById("pop-mode-blocklist") as HTMLInputElement;
+    const popAllowlistRadio = document.getElementById("pop-mode-allowlist") as HTMLInputElement;
+
+    popBlocklistRadio?.addEventListener("change", () => {
+      if (popBlocklistRadio.checked) this.changeFilterMode("blocklist");
+    });
+    popAllowlistRadio?.addEventListener("change", () => {
+      if (popAllowlistRadio.checked) this.changeFilterMode("allowlist");
+    });
+
+    // Settings Mode selection
+    this.settingsFilterModeBlocklist?.addEventListener("change", () => {
+      if (this.settingsFilterModeBlocklist.checked) this.changeFilterMode("blocklist");
+    });
+    this.settingsFilterModeAllowlist?.addEventListener("change", () => {
+      if (this.settingsFilterModeAllowlist.checked) this.changeFilterMode("allowlist");
+    });
+
+    // Quick toggle site buttons
+    this.toggleCurrentSiteBtn.addEventListener("click", () => {
+      this.toggleCurrentSiteMembership();
+      this.eqDropdownMenu.classList.add("hidden");
+    });
+    this.settingsToggleCurrentBtn.addEventListener("click", () => {
+      this.toggleCurrentSiteMembership();
+    });
+
+    // Add Domain handlers
+    this.addBlocklistBtn.addEventListener("click", () => this.addDomainToBlocklist());
+    this.addBlocklistInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") this.addDomainToBlocklist();
+    });
+
+    this.addAllowlistBtn.addEventListener("click", () => this.addDomainToAllowlist());
+    this.addAllowlistInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") this.addDomainToAllowlist();
+    });
+
+    this.presetsSelect.addEventListener("change", () => this.handlePresetChange());
     this.savePresetBtn.addEventListener("click", () => this.openPresetModal());
     this.deletePresetBtn.addEventListener("click", () => this.deletePreset());
     this.closeModalBtn.onclick = () => this.presetModal.close();
@@ -158,18 +395,10 @@ class PopupManager {
 
     slidersConfig.forEach((cfg) => {
       const idx = cfg.idx;
-      const sliderElem = document.getElementById(
-        `slider${idx}`
-      ) as HTMLInputElement;
-      const inputElem = document.getElementById(
-        `input${idx}`
-      ) as HTMLInputElement;
-      const filterTypeElem = document.getElementById(
-        `filter-type-${idx}`
-      ) as HTMLSelectElement;
-      const qInputElem = document.getElementById(
-        `q-input-${idx}`
-      ) as HTMLInputElement;
+      const sliderElem = document.getElementById(`slider${idx}`) as HTMLInputElement;
+      const inputElem = document.getElementById(`input${idx}`) as HTMLInputElement;
+      const filterTypeElem = document.getElementById(`filter-type-${idx}`) as HTMLSelectElement;
+      const qInputElem = document.getElementById(`q-input-${idx}`) as HTMLInputElement;
 
       sliderElem.oninput = () => {
         inputElem.value = sliderElem.value;
@@ -179,10 +408,7 @@ class PopupManager {
       inputElem.addEventListener("input", () => {
         let val = parseFloat(inputElem.value);
         if (isNaN(val)) val = 0;
-        val = Math.max(
-          Number(sliderElem.min),
-          Math.min(Number(sliderElem.max), val)
-        );
+        val = Math.max(Number(sliderElem.min), Math.min(Number(sliderElem.max), val));
         sliderElem.value = val.toString();
         inputElem.value = sliderElem.value;
         this.handleEqChanges();
@@ -223,15 +449,9 @@ class PopupManager {
         this.handleEqChanges();
       };
 
-      qInputElem.addEventListener("wheel", (e) =>
-        handleWheel(e, qInputElem, 0.01, 0.1, 10)
-      );
-      inputElem.addEventListener("wheel", (e) =>
-        handleWheel(e, inputElem, 0.05, -12, 12)
-      );
-      sliderElem.addEventListener("wheel", (e) =>
-        handleWheel(e, sliderElem, 0.05, -12, 12)
-      );
+      qInputElem.addEventListener("wheel", (e) => handleWheel(e, qInputElem, 0.01, 0.1, 10));
+      inputElem.addEventListener("wheel", (e) => handleWheel(e, inputElem, 0.05, -12, 12));
+      sliderElem.addEventListener("wheel", (e) => handleWheel(e, sliderElem, 0.05, -12, 12));
     });
 
     // Volume Events
@@ -268,7 +488,7 @@ class PopupManager {
 
     this.volumeResetBtn.addEventListener("click", () => {
       const gain = 1.0;
-      const pos = 0.5; // Centers perfectly now
+      const pos = 0.5;
       this.volumeSlider.value = pos.toString();
       this.volumeInput.value = gain.toFixed(2);
       this.handleVolumeChanges(gain);
@@ -302,8 +522,12 @@ class PopupManager {
     this.presetsSelect.value = selectedPreset;
     this.setSlidersFromPreset(selectedPreset);
 
-    const eqEnabled = await StorageService.getEqEnabled();
-    this.updateEqToggleUI(eqEnabled);
+    this.eqEnabled = await StorageService.getEqEnabled();
+    this.filterMode = await StorageService.getFilterMode();
+    this.blockList = await StorageService.getBlockList();
+    this.allowList = await StorageService.getAllowList();
+
+    this.updateAllFilteringUI();
     this.updateDeleteButtonState();
 
     const volume = await StorageService.getVolume(this.currentHostname);
@@ -326,6 +550,205 @@ class PopupManager {
     }
   }
 
+  private async toggleEq() {
+    this.eqEnabled = !this.eqEnabled;
+    await StorageService.setEqEnabled(this.eqEnabled);
+    this.updateAllFilteringUI();
+  }
+
+  private async changeFilterMode(mode: FilterMode) {
+    this.filterMode = mode;
+    await StorageService.setFilterMode(mode);
+    this.updateAllFilteringUI();
+  }
+
+  private isCurrentSiteInActiveList(): boolean {
+    if (!this.currentHostname || this.currentHostname === "unknown") return false;
+    if (this.filterMode === "blocklist") {
+      return this.blockList.some((domain) => matchesDomain(this.currentHostname, domain));
+    } else {
+      return this.allowList.some((domain) => matchesDomain(this.currentHostname, domain));
+    }
+  }
+
+  private async toggleCurrentSiteMembership() {
+    if (!this.currentHostname || this.currentHostname === "unknown") return;
+
+    if (this.filterMode === "blocklist") {
+      const isBlocked = this.blockList.some((d) => matchesDomain(this.currentHostname, d));
+      if (isBlocked) {
+        this.blockList = this.blockList.filter((d) => !matchesDomain(this.currentHostname, d));
+      } else {
+        this.blockList.push(this.currentHostname);
+      }
+      await StorageService.setBlockList(this.blockList);
+    } else {
+      const isAllowed = this.allowList.some((d) => matchesDomain(this.currentHostname, d));
+      if (isAllowed) {
+        this.allowList = this.allowList.filter((d) => !matchesDomain(this.currentHostname, d));
+      } else {
+        this.allowList.push(this.currentHostname);
+      }
+      await StorageService.setAllowList(this.allowList);
+    }
+    this.updateAllFilteringUI();
+  }
+
+  private async addDomainToBlocklist() {
+    const val = this.addBlocklistInput.value.trim().toLowerCase();
+    if (!val) return;
+    if (!this.blockList.includes(val)) {
+      this.blockList.push(val);
+      await StorageService.setBlockList(this.blockList);
+      this.addBlocklistInput.value = "";
+      this.updateAllFilteringUI();
+    }
+  }
+
+  private async addDomainToAllowlist() {
+    const val = this.addAllowlistInput.value.trim().toLowerCase();
+    if (!val) return;
+    if (!this.allowList.includes(val)) {
+      this.allowList.push(val);
+      await StorageService.setAllowList(this.allowList);
+      this.addAllowlistInput.value = "";
+      this.updateAllFilteringUI();
+    }
+  }
+
+  private async removeDomainFromBlocklist(domain: string) {
+    this.blockList = this.blockList.filter((d) => d !== domain);
+    await StorageService.setBlockList(this.blockList);
+    this.updateAllFilteringUI();
+  }
+
+  private async removeDomainFromAllowlist(domain: string) {
+    this.allowList = this.allowList.filter((d) => d !== domain);
+    await StorageService.setAllowList(this.allowList);
+    this.updateAllFilteringUI();
+  }
+
+  private updateAllFilteringUI() {
+    const isSiteActive = StorageService.isSiteActive(
+      this.currentHostname,
+      this.eqEnabled,
+      this.filterMode,
+      this.blockList,
+      this.allowList
+    );
+
+    // Main split toggle visual
+    this.eqToggle.classList.toggle("on", isSiteActive);
+    this.eqDropdownBtn.classList.toggle("on", isSiteActive);
+    if (!this.eqEnabled) {
+      this.eqToggle.textContent = "Equalizer OFF";
+    } else if (!isSiteActive) {
+      this.eqToggle.textContent = "EQ OFF (Filtered)";
+    } else {
+      this.eqToggle.textContent = "Equalizer ON";
+    }
+
+    // Radio inputs sync
+    const popBlocklistRadio = document.getElementById("pop-mode-blocklist") as HTMLInputElement;
+    const popAllowlistRadio = document.getElementById("pop-mode-allowlist") as HTMLInputElement;
+    if (popBlocklistRadio) popBlocklistRadio.checked = this.filterMode === "blocklist";
+    if (popAllowlistRadio) popAllowlistRadio.checked = this.filterMode === "allowlist";
+
+    if (this.settingsFilterModeBlocklist) this.settingsFilterModeBlocklist.checked = this.filterMode === "blocklist";
+    if (this.settingsFilterModeAllowlist) this.settingsFilterModeAllowlist.checked = this.filterMode === "allowlist";
+
+    const labelBlocklist = document.getElementById("label-mode-blocklist");
+    const labelAllowlist = document.getElementById("label-mode-allowlist");
+    labelBlocklist?.classList.toggle("active-mode", this.filterMode === "blocklist");
+    labelAllowlist?.classList.toggle("active-mode", this.filterMode === "allowlist");
+
+    // Quick toggle button labels
+    const isListed = this.isCurrentSiteInActiveList();
+    const domainText = this.currentHostname || "this site";
+
+    if (this.filterMode === "blocklist") {
+      this.toggleCurrentSiteBtn.textContent = isListed
+        ? `Unblock ${domainText}`
+        : `Block ${domainText}`;
+      this.settingsToggleCurrentBtn.textContent = isListed
+        ? `Remove from Blocklist`
+        : `Add to Blocklist`;
+    } else {
+      this.toggleCurrentSiteBtn.textContent = isListed
+        ? `Remove ${domainText} from Allowlist`
+        : `Allow ${domainText}`;
+      this.settingsToggleCurrentBtn.textContent = isListed
+        ? `Remove from Allowlist`
+        : `Add to Allowlist`;
+    }
+
+    // Settings status badge & domain display
+    if (this.currentSiteDomainDisplay) {
+      this.currentSiteDomainDisplay.textContent = this.currentHostname || "Browser page";
+    }
+    if (this.currentSiteStatusBadge) {
+      if (!this.eqEnabled) {
+        this.currentSiteStatusBadge.textContent = "Globally Disabled";
+        this.currentSiteStatusBadge.className = "status-badge off";
+      } else if (isSiteActive) {
+        this.currentSiteStatusBadge.textContent = "Active on this site";
+        this.currentSiteStatusBadge.className = "status-badge active";
+      } else {
+        this.currentSiteStatusBadge.textContent = "Disabled by filter";
+        this.currentSiteStatusBadge.className = "status-badge blocked";
+      }
+    }
+
+    // Render lists
+    this.renderDomainList(
+      this.blocklistItemsContainer,
+      this.blockList,
+      (d) => this.removeDomainFromBlocklist(d)
+    );
+    this.blocklistCountSpan.textContent = this.blockList.length.toString();
+
+    this.renderDomainList(
+      this.allowlistItemsContainer,
+      this.allowList,
+      (d) => this.removeDomainFromAllowlist(d)
+    );
+    this.allowlistCountSpan.textContent = this.allowList.length.toString();
+  }
+
+  private renderDomainList(
+    container: HTMLDivElement,
+    list: string[],
+    onRemove: (domain: string) => void
+  ) {
+    container.innerHTML = "";
+    if (list.length === 0) {
+      const emptyMsg = document.createElement("div");
+      emptyMsg.className = "empty-list-msg";
+      emptyMsg.textContent = "No sites added yet";
+      container.appendChild(emptyMsg);
+      return;
+    }
+
+    list.forEach((domain) => {
+      const item = document.createElement("div");
+      item.className = "domain-item";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "domain-name";
+      nameSpan.textContent = domain;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "domain-remove-btn";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.title = `Remove ${domain}`;
+      removeBtn.addEventListener("click", () => onRemove(domain));
+
+      item.appendChild(nameSpan);
+      item.appendChild(removeBtn);
+      container.appendChild(item);
+    });
+  }
 
   private updatePresetsSelector() {
     this.presetsSelect.innerHTML = "";
@@ -379,18 +802,6 @@ class PopupManager {
     const name = this.presetsSelect.value;
     const isUser = this.userPresets.some((p) => p.name === name);
     this.deletePresetBtn.disabled = !isUser || name === CUSTOM_PRESET_NAME;
-  }
-
-  private async toggleEq() {
-    const enabled = await StorageService.getEqEnabled();
-    const newState = !enabled;
-    await StorageService.setEqEnabled(newState);
-    this.updateEqToggleUI(newState);
-  }
-
-  private updateEqToggleUI(enabled: boolean) {
-    this.eqToggle.classList.toggle("on", enabled);
-    this.eqToggle.textContent = enabled ? "Equalizer ON" : "Equalizer OFF";
   }
 
   private handlePresetChange() {
@@ -475,7 +886,6 @@ class PopupManager {
         : 6 * Math.pow(parseFloat(this.volumeSlider.value), 2.585);
     StorageService.setVolume(this.currentHostname, vol);
   }
-
 
   private async autosavePreset() {
     const name = this.presetsSelect.value;

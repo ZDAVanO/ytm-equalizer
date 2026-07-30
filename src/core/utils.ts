@@ -1,4 +1,12 @@
 
+export function matchesDomain(hostname: string, targetDomain: string): boolean {
+  if (!hostname || !targetDomain) return false;
+  const h = hostname.toLowerCase().trim();
+  const t = targetDomain.toLowerCase().trim();
+  if (!h || !t) return false;
+  return h === t || h.endsWith('.' + t);
+}
+
 // MARK: devLog
 export function devLog(...args: any[]) {
   if (process.env.NODE_ENV === 'development') {

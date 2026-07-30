@@ -118,7 +118,7 @@ h1 {
 
 .card {
   /* padding: 2em; */
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 
   display: flex;
   align-items: center;
@@ -715,8 +715,8 @@ dialog::backdrop {
 .peq-editor {
   display: flex;
   width: 100%;
-  height: 425px;
-  gap: 12px;
+  height: 350px;
+  gap: 10px;
   margin-top: 4px;
 }
 
@@ -726,15 +726,18 @@ dialog::backdrop {
   background: #1c1c1e;
   border: 1px solid #2c2c2e;
   border-radius: 12px;
-  padding: 8px 6px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
+.peq-row td,
 .peq-add-row td {
-  padding: 6px 4px;
+  padding: 4px 1px;
+  vertical-align: middle;
   text-align: center;
+  border-bottom: 1px solid #262628;
 }
 
 .peq-table-add-btn {
@@ -743,13 +746,15 @@ dialog::backdrop {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  padding: 5px 0;
-  font-size: 0.88em;
+  padding: 3px 2px;
+  font-size: 12px;
+  line-height: 1.2;
   font-weight: 600;
   background: rgba(44, 44, 46, 0.6);
   color: #fa486f;
   border: 1px dashed #3a3a3c;
   border-radius: 6px;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -764,7 +769,7 @@ dialog::backdrop {
 .peq-table-container {
   flex: 1;
   overflow-y: auto;
-  padding-right: 2px;
+  /* padding-right: 2px; */
 }
 
 /* Custom dark scrollbar */
@@ -784,7 +789,8 @@ dialog::backdrop {
 
 .peq-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.92em;
   table-layout: fixed;
 }
@@ -794,14 +800,14 @@ dialog::backdrop {
   color: #8e8e93;
   font-weight: 600;
   font-size: 11px;
-  padding: 4px 1px;
-  border-bottom: 1px solid #2c2c2e;
+  /* padding: 4px 1px; */
+  border-bottom: none;
   user-select: none;
 }
 
 .peq-row {
-  border-bottom: 1px solid #262628;
   transition: background 0.15s;
+  border-radius: 6px;
 }
 
 .peq-row:hover {
@@ -809,13 +815,28 @@ dialog::backdrop {
 }
 
 .peq-row.selected {
-  background: rgba(250, 72, 111, 0.14);
+  background: rgba(250, 72, 111, 0.16);
 }
 
 .peq-row td {
   padding: 4px 1px;
   vertical-align: middle;
   text-align: center;
+  border-bottom: 1px solid #262628;
+}
+
+.peq-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.peq-row td:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.peq-row td:last-child {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
 
 .peq-num-badge {
@@ -843,9 +864,11 @@ dialog::backdrop {
   color: #ffffff;
   border: 1px solid #3a3a3c;
   border-radius: 6px;
-  padding: 3px 1px;
+  padding: 3px 2px;
   font-size: 12px;
+  line-height: 1.2;
   font-weight: 700;
+  box-sizing: border-box;
   outline: none;
   cursor: pointer;
   width: 100%;
@@ -872,6 +895,7 @@ dialog::backdrop {
   border-radius: 6px;
   padding: 3px 2px;
   font-size: 12px;
+  line-height: 1.2;
   font-weight: 600;
   width: 100%;
   box-sizing: border-box;

@@ -42,7 +42,8 @@ export function filterHasQ(type: BiquadFilterType): boolean {
 export function formatFrequency(freq: number): string {
   if (freq >= 1000) {
     const k = freq / 1000;
-    return `${k >= 10 ? Math.round(k) : k.toFixed(1)}k`;
+    const formatted = k >= 10 ? Math.round(k).toString() : (Number.isInteger(k) ? k.toString() : k.toFixed(1));
+    return `${formatted}k`;
   }
   return `${Math.round(freq)}`;
 }

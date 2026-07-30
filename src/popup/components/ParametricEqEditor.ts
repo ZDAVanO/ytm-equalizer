@@ -504,7 +504,7 @@ export class ParametricEqEditor {
 
       if (freq === 20 || freq === 100 || freq === 1000 || freq === 10000 || freq === 20000) {
         this.ctx.fillStyle = "#8e8e93";
-        this.ctx.fillText(formatFrequency(freq), x + 4 * dpr, height - 6 * dpr);
+        this.ctx.fillText(formatFrequency(freq) + " Hz", x + 4 * dpr, height - 6 * dpr);
       }
     });
   }

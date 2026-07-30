@@ -338,8 +338,8 @@ class PopupManager {
     });
 
     // Initialize Popup Visualizer (captures audio from the active tab via tabCapture)
-    this.visualizer = new PopupVisualizer((analyser) => {
-      this.peqEditor.setAnalyser(analyser);
+    this.visualizer = new PopupVisualizer((analyser, captureError) => {
+      this.peqEditor.setAnalyser(analyser, captureError);
     });
   }
 

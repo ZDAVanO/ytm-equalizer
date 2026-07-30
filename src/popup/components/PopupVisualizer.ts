@@ -8,9 +8,9 @@ export class PopupVisualizer {
   private audioCtx: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private stream: MediaStream | null = null;
-  private onAnalyserChange: (analyser: AnalyserNode | null) => void;
+  private onAnalyserChange: (analyser: AnalyserNode | null, captureError?: boolean) => void;
 
-  constructor(onAnalyserChange: (analyser: AnalyserNode | null) => void) {
+  constructor(onAnalyserChange: (analyser: AnalyserNode | null, captureError?: boolean) => void) {
     this.onAnalyserChange = onAnalyserChange;
   }
 
@@ -19,18 +19,21 @@ export class PopupVisualizer {
     // It captures the currently active tab's audio stream.
     if (!chrome.tabCapture) {
       console.warn("[PopupVisualizer] chrome.tabCapture is not available.");
+      this.onAnalyserChange(null, true);
       return;
     }
 
     try {
       chrome.tabCapture.capture({ audio: true, video: false }, (stream) => {
         if (chrome.runtime.lastError) {
-          // This is expected when there's no audio playing or capture is not allowed
+          // This is expected when capture is not allowed (e.g. opened via in-page button)
           console.warn("[PopupVisualizer] tabCapture failed:", chrome.runtime.lastError.message);
+          this.onAnalyserChange(null, true);
           return;
         }
         if (!stream) {
           console.warn("[PopupVisualizer] No stream returned from tabCapture.");
+          this.onAnalyserChange(null, true);
           return;
         }
 
@@ -52,7 +55,7 @@ export class PopupVisualizer {
         // so we must route the captured stream back to speakers ourselves.
         source.connect(this.audioCtx.destination);
 
-        this.onAnalyserChange(this.analyser);
+        this.onAnalyserChange(this.analyser, false);
 
 
         // Stop visualizer when the stream ends (e.g. tab closed/navigated)
@@ -62,11 +65,12 @@ export class PopupVisualizer {
       });
     } catch (e) {
       console.warn("[PopupVisualizer] Unexpected error starting capture:", e);
+      this.onAnalyserChange(null, true);
     }
   }
 
   stop() {
-    this.onAnalyserChange(null);
+    this.onAnalyserChange(null, false);
 
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());

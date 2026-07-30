@@ -25,6 +25,7 @@ export class ParametricEqEditor {
   private analyser: AnalyserNode | null = null;
   private vizDataArray: Uint8Array | null = null;
   private vizRafId: number | null = null;
+  private vizCaptureError = false;
 
   // Web Audio Offline Context for frequency response calculation
   private offlineAudioCtx = new OfflineAudioContext(1, 1, 44100);
@@ -68,15 +69,16 @@ export class ParametricEqEditor {
     this.drawGraph();
   }
 
-  public setAnalyser(analyser: AnalyserNode | null) {
+  public setAnalyser(analyser: AnalyserNode | null, captureError: boolean = false) {
     this.analyser = analyser;
+    this.vizCaptureError = captureError;
     if (analyser) {
       this.vizDataArray = new Uint8Array(analyser.frequencyBinCount);
       this.startVizLoop();
     } else {
       this.stopVizLoop();
       this.vizDataArray = null;
-      // Redraw once to clear visualizer bars
+      // Redraw once to update visualizer state or show notice
       this.drawGraph();
     }
   }
@@ -569,7 +571,12 @@ export class ParametricEqEditor {
   }
 
   private drawVisualizer(width: number, height: number) {
-    if (!this.analyser || !this.vizDataArray) return;
+    if (!this.analyser || !this.vizDataArray) {
+      if (this.vizCaptureError) {
+        this.drawVisualizerUnavailableNotice(width, height);
+      }
+      return;
+    }
 
     this.analyser.getByteFrequencyData(this.vizDataArray);
 
@@ -598,6 +605,27 @@ export class ParametricEqEditor {
       const y = height - barH;
       this.ctx.fillRect(px, y, 1, barH);
     }
+  }
+
+  private drawVisualizerUnavailableNotice(width: number, height: number) {
+    const dpr = window.devicePixelRatio || 1;
+    const centerX = width / 2;
+    const posY = this.dbToY(-9, height);
+
+    this.ctx.save();
+    this.ctx.fillStyle = "#8e8e93";
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+
+    // Primary line (same style as grid text, slightly larger font)
+    this.ctx.font = `600 ${13 * dpr}px Inter, sans-serif`;
+    this.ctx.fillText("Spectrum visualizer disabled in site button view", centerX, posY - 9 * dpr);
+
+    // Secondary line
+    this.ctx.font = `400 ${11.5 * dpr}px Inter, sans-serif`;
+    this.ctx.fillText("Click extension icon in browser toolbar to enable visualizer", centerX, posY + 9 * dpr);
+
+    this.ctx.restore();
   }
 
   private renderHandlesOverlay(cssWidth: number, cssHeight: number) {

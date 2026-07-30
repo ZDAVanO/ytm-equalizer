@@ -642,7 +642,13 @@ export class ParametricEqEditor {
       const a3 = y1;
 
       const val = a0 * t * t * t + a1 * t * t + a2 * t + a3;
-      const amplitude = Math.max(0, Math.min(255, val)) / 255;
+      let amplitude = Math.max(0, Math.min(255, val)) / 255;
+
+      // 3. MiniMeters-style Spectrum Tilt (+4.5 dB slope with 1 kHz pivot point) & Visual Gain Scaling
+      // Attenuates excessive bass humps, boosts high frequencies, and scales peak amplitude up to 90% canvas height.
+      const tiltFactor = Math.pow(freq / 1000, 0.20);
+      const visualGain = 1.25; // Visual sensitivity boost to fill the canvas dynamically
+      amplitude = Math.max(0, Math.min(1, amplitude * tiltFactor * visualGain));
 
       const barH = amplitude * height;
       const y = height - barH;

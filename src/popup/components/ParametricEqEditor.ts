@@ -602,19 +602,72 @@ export class ParametricEqEditor {
     gradient.addColorStop(1, "rgba(148, 163, 184, 0.02)");
     this.ctx.fillStyle = gradient;
 
-    // Map each horizontal pixel to a log-scale frequency,
-    // then find the FFT bin, and draw a 1-pixel-wide bar.
-    for (let px = 0; px < width; px++) {
-      const freq = this.xToFreq(px, width);
-      // Bin index for this frequency
-      const binIndex = Math.min(binCount - 1, Math.round((freq / (sampleRate / 2)) * binCount));
-      const amplitude = this.vizDataArray[binIndex] / 255; // 0..1
-      if (amplitude < 0.01) continue;
+    // 1. Pre-smooth raw FFT bins using a 5-tap Gaussian kernel to remove sharp noise spikes
+    const smoothedBins = new Float32Array(binCount);
+    for (let i = 0; i < binCount; i++) {
+      const b0 = this.vizDataArray[Math.max(0, i - 2)];
+      const b1 = this.vizDataArray[Math.max(0, i - 1)];
+      const b2 = this.vizDataArray[i];
+      const b3 = this.vizDataArray[Math.min(binCount - 1, i + 1)];
+      const b4 = this.vizDataArray[Math.min(binCount - 1, i + 2)];
+      smoothedBins[i] = b0 * 0.06 + b1 * 0.24 + b2 * 0.40 + b3 * 0.24 + b4 * 0.06;
+    }
 
-      // Bars start from the very bottom of the canvas (ignoring padding)
+    // 2. Catmull-Rom cubic spline interpolation (C1-continuous: zero sharp knees/kinks at integer bin boundaries)
+    const nyquist = sampleRate / 2;
+    const points: { x: number; y: number }[] = [];
+    const step = 3; // Sample every 3 pixels for a silky smooth Bezier path
+
+    for (let px = 0; px <= width + step; px += step) {
+      const clampedPx = Math.min(width, px);
+      const freq = this.xToFreq(clampedPx, width);
+      const exactBin = Math.max(0, Math.min(binCount - 1, (freq / nyquist) * binCount));
+      
+      const i1 = Math.floor(exactBin);
+      const t = exactBin - i1;
+
+      const i0 = Math.max(0, i1 - 1);
+      const i2 = Math.min(binCount - 1, i1 + 1);
+      const i3 = Math.min(binCount - 1, i1 + 2);
+
+      const y0 = smoothedBins[i0];
+      const y1 = smoothedBins[i1];
+      const y2 = smoothedBins[i2];
+      const y3 = smoothedBins[i3];
+
+      // Catmull-Rom cubic spline formula
+      const a0 = -0.5 * y0 + 1.5 * y1 - 1.5 * y2 + 0.5 * y3;
+      const a1 = y0 - 2.5 * y1 + 2.0 * y2 - 0.5 * y3;
+      const a2 = -0.5 * y0 + 0.5 * y2;
+      const a3 = y1;
+
+      const val = a0 * t * t * t + a1 * t * t + a2 * t + a3;
+      const amplitude = Math.max(0, Math.min(255, val)) / 255;
+
       const barH = amplitude * height;
       const y = height - barH;
-      this.ctx.fillRect(px, y, 1, barH);
+      points.push({ x: clampedPx, y });
+    }
+
+    // 3. Render continuous rounded curve with Quadratic Bezier midpoints
+    if (points.length > 0) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, height);
+      this.ctx.lineTo(points[0].x, points[0].y);
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i + 1];
+        const xc = (p0.x + p1.x) / 2;
+        const yc = (p0.y + p1.y) / 2;
+        this.ctx.quadraticCurveTo(p0.x, p0.y, xc, yc);
+      }
+
+      const last = points[points.length - 1];
+      this.ctx.lineTo(last.x, last.y);
+      this.ctx.lineTo(width, height);
+      this.ctx.closePath();
+      this.ctx.fill();
     }
   }
 

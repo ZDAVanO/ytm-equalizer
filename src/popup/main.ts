@@ -93,10 +93,17 @@ class PopupManager {
           <div class="card">
             <!-- Split Button -->
             <div class="split-btn-group">
-              <button id="${Constants.EQ_TOGGLE_BTN_ID}" type="button" class="split-btn-main">Equalizer</button>
+              <button id="${Constants.EQ_TOGGLE_BTN_ID}" type="button" class="split-btn-main" title="Equalizer ON / OFF">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v10" />
+                  <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                </svg>
+              </button>
               <button id="${Constants.EQ_DROPDOWN_BTN_ID}" type="button" class="split-btn-arrow" title="Filter Options">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-                  <path d="M7 10l5 5 5-5z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="2.5" y1="6" x2="21.5" y2="6" />
+                  <line x1="7.25" y1="12" x2="16.75" y2="12" />
+                  <line x1="11.5" y1="18" x2="12.5" y2="18" />
                 </svg>
               </button>
               <div id="${Constants.EQ_DROPDOWN_MENU_ID}" class="filter-dropdown-menu hidden">
@@ -592,11 +599,11 @@ class PopupManager {
     this.eqToggle.classList.toggle("on", isSiteActive);
     this.eqDropdownBtn.classList.toggle("on", isSiteActive);
     if (!this.eqEnabled) {
-      this.eqToggle.textContent = "Equalizer OFF";
+      this.eqToggle.title = "Equalizer OFF";
     } else if (!isSiteActive) {
-      this.eqToggle.textContent = "EQ OFF (Filtered)";
+      this.eqToggle.title = "EQ OFF (Filtered)";
     } else {
-      this.eqToggle.textContent = "Equalizer ON";
+      this.eqToggle.title = "Equalizer ON";
     }
 
     // Radio inputs sync

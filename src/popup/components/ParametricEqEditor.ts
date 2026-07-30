@@ -556,7 +556,14 @@ export class ParametricEqEditor {
 
       if (freq === 20 || freq === 100 || freq === 1000 || freq === 10000 || freq === 20000) {
         this.ctx.fillStyle = "#8e8e93";
-        this.ctx.fillText(formatFrequency(freq) + " Hz", x + 4 * dpr, height - 6 * dpr);
+        if (freq === 10000 || freq === 20000) {
+          // Draw to the LEFT of the line so text doesn't overflow the right edge
+          this.ctx.textAlign = "right";
+          this.ctx.fillText(formatFrequency(freq), Math.min(width - 8 * dpr, x - 4 * dpr), height - 6 * dpr);
+          this.ctx.textAlign = "left";
+        } else {
+          this.ctx.fillText(formatFrequency(freq), Math.max(8 * dpr, x + 4 * dpr), height - 6 * dpr);
+        }
       }
     });
   }
@@ -570,12 +577,8 @@ export class ParametricEqEditor {
     const fftSize = this.analyser.fftSize;
     const binCount = this.analyser.frequencyBinCount;
 
-    // Bottom padding matches dbToY padding so bars don't overflow the grid
-    const padding = 20;
-    const drawableHeight = height - padding * 2;
-
     // Build gradient: teal/cyan bottom → transparent top
-    const gradient = this.ctx.createLinearGradient(0, height - padding, 0, padding);
+    const gradient = this.ctx.createLinearGradient(0, height, 0, 0);
     gradient.addColorStop(0, "rgba(56, 189, 248, 0.55)");
     gradient.addColorStop(0.5, "rgba(56, 189, 248, 0.20)");
     gradient.addColorStop(1, "rgba(56, 189, 248, 0.04)");
@@ -590,14 +593,18 @@ export class ParametricEqEditor {
       const amplitude = this.vizDataArray[binIndex] / 255; // 0..1
       if (amplitude < 0.01) continue;
 
-      const barH = amplitude * drawableHeight;
-      const y = height - padding - barH;
+      // Bars start from the very bottom of the canvas (ignoring padding)
+      const barH = amplitude * height;
+      const y = height - barH;
       this.ctx.fillRect(px, y, 1, barH);
     }
   }
 
   private renderHandlesOverlay(cssWidth: number, cssHeight: number) {
     this.handlesOverlay.innerHTML = "";
+
+    // Half the handle diameter — keeps the circle fully inside the frame
+    const HANDLE_R = 12;
 
     this.filters.forEach((filter, idx) => {
       const x = this.freqToX(filter.freq, cssWidth);
@@ -607,8 +614,9 @@ export class ParametricEqEditor {
 
       const handle = document.createElement("div");
       handle.className = `peq-handle ${isSelected ? "selected" : ""}`;
-      handle.style.left = `${x}px`;
-      handle.style.top = `${y}px`;
+      // Clamp visually so the circle is never clipped by the frame
+      handle.style.left = `${Math.max(HANDLE_R, Math.min(cssWidth - HANDLE_R, x))}px`;
+      handle.style.top = `${Math.max(HANDLE_R, Math.min(cssHeight - HANDLE_R, y))}px`;
       handle.dataset.index = idx.toString();
 
       handle.innerHTML = `
@@ -618,6 +626,7 @@ export class ParametricEqEditor {
       this.handlesOverlay.appendChild(handle);
     });
   }
+
 
   // MARK: Mouse Drag & Wheel Handlers
   private onOverlayMouseDown(e: MouseEvent) {

@@ -43,7 +43,7 @@ export function formatFrequency(freq: number): string {
   if (freq >= 1000) {
     const k = freq / 1000;
     const formatted = k >= 10 ? Math.round(k).toString() : (Number.isInteger(k) ? k.toString() : k.toFixed(1));
-    return `${formatted}k`;
+    return `${formatted} kHz`;
   }
-  return `${Math.round(freq)}`;
+  return `${Math.round(freq)} Hz`;
 }

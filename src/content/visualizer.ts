@@ -39,8 +39,16 @@ export function initVisualizer(analyser: AnalyserNode) {
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
+    let rafId: number | null = null;
+
     function draw() {
-        requestAnimationFrame(draw);
+        // Stop loop when tab is hidden — prevents unnecessary GPU load
+        if (document.hidden) {
+            rafId = null;
+            return;
+        }
+
+        rafId = requestAnimationFrame(draw);
 
         analyser.getByteFrequencyData(dataArray);
 
@@ -66,5 +74,12 @@ export function initVisualizer(analyser: AnalyserNode) {
         }
     }
 
+    // Resume loop when tab becomes visible again
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && rafId === null) {
+            draw();
+        }
+    });
+
     draw();
-}
+}

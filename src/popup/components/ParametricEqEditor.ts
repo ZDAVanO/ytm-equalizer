@@ -18,6 +18,8 @@ export class ParametricEqEditor {
   // Dragging state
   private isDragging = false;
   private activeDragIndex: number | null = null;
+  private pendingMouseMove: MouseEvent | null = null;
+  private rafPending = false;
 
   // Web Audio Offline Context for frequency response calculation
   private offlineAudioCtx = new OfflineAudioContext(1, 1, 44100);
@@ -155,8 +157,21 @@ export class ParametricEqEditor {
     }
 
     this.handlesOverlay.addEventListener("mousedown", (e) => this.onOverlayMouseDown(e));
-    window.addEventListener("mousemove", (e) => this.onOverlayMouseMove(e));
-    window.addEventListener("mouseup", () => this.onOverlayMouseUp());
+    document.addEventListener("mousemove", (e) => {
+      if (!this.isDragging) return;
+      this.pendingMouseMove = e;
+      if (!this.rafPending) {
+        this.rafPending = true;
+        requestAnimationFrame(() => {
+          this.rafPending = false;
+          if (this.pendingMouseMove) {
+            this.onOverlayMouseMove(this.pendingMouseMove);
+            this.pendingMouseMove = null;
+          }
+        });
+      }
+    });
+    document.addEventListener("mouseup", () => this.onOverlayMouseUp());
     this.handlesOverlay.addEventListener("wheel", (e) => this.onOverlayWheel(e), { passive: false });
   }
 

@@ -63,48 +63,46 @@ class PopupManager {
           </a>
         </div>
       </div>
-      <div>
-        <div class="card">
-          <button id="${
-            Constants.EQ_TOGGLE_BTN_ID
-          }" type="button">Equalizer</button>
-          <select id="${Constants.PRESETS_SELECT_ID}"></select>
-          <button id="${
-            Constants.SAVE_PRESET_BTN_ID
-          }" type="button">New</button>
-          <button id="${
-            Constants.DELETE_PRESET_BTN_ID
-          }" type="button">Delete</button>
-        </div>
-        <div class="sliders-row">
-          ${VolumeSlider(Constants.VOLUME_SLIDER_ID, Constants.VOLUME_INPUT_ID)}
-          <div class="vertical-divider"></div>
-          ${slidersConfig.map((cfg) => Slider(cfg.idx, cfg.freq)).join("")}
-        </div>
-        <dialog id="${Constants.PRESET_MODAL_ID}" class="modal" closedby="any">
-          <div class="modal-content">
-            <div class="modal-header">
-              <span class="modal-title">New preset</span>
-              <button id="${
-                Constants.CLOSE_MODAL_BTN_ID
-              }" class="close" type="button" aria-label="Close">&times;</button>
-            </div>
-            <div class="modal-body">
-              <input id="${
-                Constants.PRESET_NAME_INPUT_ID
-              }" type="text" placeholder="New preset name" />
-            </div>
-            <div class="modal-footer">
-              <button id="${
-                Constants.MODAL_SAVE_BTN_ID
-              }" type="button">Save</button>
-              <button id="${
-                Constants.MODAL_CANCEL_BTN_ID
-              }" type="button">Close</button>
-            </div>
+
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="equalizer">Equalizer</button>
+        <button class="tab-btn" data-tab="settings">Settings</button>
+      </nav>
+
+      <div id="tab-equalizer" class="tab-content active">
+        <div>
+          <div class="card">
+            <button id="${Constants.EQ_TOGGLE_BTN_ID}" type="button">Equalizer</button>
+            <select id="${Constants.PRESETS_SELECT_ID}"></select>
+            <button id="${Constants.SAVE_PRESET_BTN_ID}" type="button">New</button>
+            <button id="${Constants.DELETE_PRESET_BTN_ID}" type="button">Delete</button>
           </div>
-        </dialog>
+          <div class="sliders-row">
+            ${VolumeSlider(Constants.VOLUME_SLIDER_ID, Constants.VOLUME_INPUT_ID)}
+            <div class="vertical-divider"></div>
+            ${slidersConfig.map((cfg) => Slider(cfg.idx, cfg.freq)).join("")}
+          </div>
+        </div>
       </div>
+
+      <div id="tab-settings" class="tab-content">
+      </div>
+
+      <dialog id="${Constants.PRESET_MODAL_ID}" class="modal" closedby="any">
+        <div class="modal-content">
+          <div class="modal-header">
+            <span class="modal-title">New preset</span>
+            <button id="${Constants.CLOSE_MODAL_BTN_ID}" class="close" type="button" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <input id="${Constants.PRESET_NAME_INPUT_ID}" type="text" placeholder="New preset name" />
+          </div>
+          <div class="modal-footer">
+            <button id="${Constants.MODAL_SAVE_BTN_ID}" type="button">Save</button>
+            <button id="${Constants.MODAL_CANCEL_BTN_ID}" type="button">Close</button>
+          </div>
+        </div>
+      </dialog>
     `;
   }
 
@@ -274,6 +272,22 @@ class PopupManager {
       this.volumeSlider.value = pos.toString();
       this.volumeInput.value = gain.toFixed(2);
       this.handleVolumeChanges(gain);
+    });
+
+    // Tab Switching Logic
+    const tabBtns = document.querySelectorAll(".tab-btn");
+    const tabContents = document.querySelectorAll(".tab-content");
+
+    tabBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetTab = btn.getAttribute("data-tab");
+
+        tabBtns.forEach((b) => b.classList.remove("active"));
+        tabContents.forEach((c) => c.classList.remove("active"));
+
+        btn.classList.add("active");
+        document.getElementById(`tab-${targetTab}`)?.classList.add("active");
+      });
     });
   }
 

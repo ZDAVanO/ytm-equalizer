@@ -595,11 +595,11 @@ export class ParametricEqEditor {
     const sampleRate = this.analyser.context.sampleRate;
     const binCount = this.analyser.frequencyBinCount;
 
-    // Build gradient: teal/cyan bottom → transparent top
+    // Build gradient: Option 3 — Slate / Muted Steel Blue (slate-grey bottom → transparent top)
     const gradient = this.ctx.createLinearGradient(0, height, 0, 0);
-    gradient.addColorStop(0, "rgba(56, 189, 248, 0.55)");
-    gradient.addColorStop(0.5, "rgba(56, 189, 248, 0.20)");
-    gradient.addColorStop(1, "rgba(56, 189, 248, 0.04)");
+    gradient.addColorStop(0, "rgba(148, 163, 184, 0.32)");
+    gradient.addColorStop(0.5, "rgba(148, 163, 184, 0.12)");
+    gradient.addColorStop(1, "rgba(148, 163, 184, 0.02)");
     this.ctx.fillStyle = gradient;
 
     // Map each horizontal pixel to a log-scale frequency,

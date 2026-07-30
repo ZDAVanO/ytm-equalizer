@@ -113,7 +113,7 @@ chrome.storage.local.get(['eqEnabled', 'filterMode', 'blockList', 'allowList', '
     devLog('[content] effectiveEqEnabled state on load:', effectiveEqEnabled);
 
     // Load currentFilters
-    if (Array.isArray(data.currentFilters) && data.currentFilters.length === equalizerFilters.length) {
+    if (Array.isArray(data.currentFilters)) {
         updateFilters(data.currentFilters);
         devLog('[content] Loaded currentFilters from storage:', data.currentFilters);
     }
@@ -172,7 +172,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (changes.currentFilters) {
         devLog('[content] currentFilters changed:', changes.currentFilters.newValue);
         const newFilters = changes.currentFilters.newValue;
-        if (Array.isArray(newFilters) && newFilters.length === equalizerFilters.length) {
+        if (Array.isArray(newFilters)) {
             updateFilters(newFilters);
         }
     }

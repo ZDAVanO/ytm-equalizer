@@ -34,15 +34,32 @@ export let appliedFilters: BiquadFilterNode[] = [];
 
 // MARK: updateFilters
 export function updateFilters(filters: any[]) {
-    filters.forEach((band, i) => {
+    const now = audioContext.currentTime;
+    for (let i = 0; i < FILTER_COUNT; i++) {
         const filter = equalizerFilters[i];
+        const band = filters && filters[i];
         if (filter) {
-            filter.type = filterTypes.includes(band.type) ? band.type : 'peaking';
-            filter.frequency.value = band.freq || 0;
-            filter.Q.value = band.Q || 1;
-            filter.gain.value = band.gain || 0;
+            if (band) {
+                const targetType = filterTypes.includes(band.type) ? band.type : 'peaking';
+                if (filter.type !== targetType) {
+                    filter.type = targetType;
+                }
+                const freq = band.freq || 1000;
+                const q = typeof band.Q === 'number' ? band.Q : 1;
+                const gain = band.gain || 0;
+
+                filter.frequency.setValueAtTime(freq, now);
+                filter.Q.setValueAtTime(q, now);
+                filter.gain.setValueAtTime(gain, now);
+            } else {
+                // Inactive or deleted band -> transparent flat pass
+                filter.type = 'peaking';
+                filter.frequency.setValueAtTime(1000, now);
+                filter.Q.setValueAtTime(1, now);
+                filter.gain.setValueAtTime(0, now);
+            }
         }
-    });
+    }
 }
 
 // MARK: updateVolume

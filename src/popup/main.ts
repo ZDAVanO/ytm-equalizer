@@ -3,28 +3,17 @@ import ytm_eq_icon from "@/assets/icon-128.png";
 import { version } from "../../package.json";
 import * as Constants from "@constants";
 import defaultPresets, { presetDisplayNames } from "./defaultPresets";
-import { StorageService, matchesDomain } from "./services/StorageService";
-import { Slider } from "./components/Slider";
+import { StorageService, matchesDomain, normalizeFilters } from "./services/StorageService";
 import { VolumeSlider } from "./components/VolumeSlider";
-import { SliderConfig, FilterPreset, FilterMode } from "./types";
-
-const slidersConfig: SliderConfig[] = [
-  { idx: 1, freq: 32 },
-  { idx: 2, freq: 64 },
-  { idx: 3, freq: 125 },
-  { idx: 4, freq: 250 },
-  { idx: 5, freq: 500 },
-  { idx: 6, freq: 1000 },
-  { idx: 7, freq: 2000 },
-  { idx: 8, freq: 4000 },
-  { idx: 9, freq: 8000 },
-  { idx: 10, freq: 16000 },
-];
+import { ParametricEqEditor } from "./components/ParametricEqEditor";
+import { FilterPreset, Filter, FilterMode } from "./types";
 
 const CUSTOM_PRESET_NAME = "[Custom]";
 
 class PopupManager {
   private userPresets: FilterPreset[] = [];
+  private peqEditor!: ParametricEqEditor;
+
   private eqToggle!: HTMLButtonElement;
   private eqDropdownBtn!: HTMLButtonElement;
   private eqDropdownMenu!: HTMLDivElement;
@@ -134,12 +123,14 @@ class PopupManager {
             <select id="${Constants.PRESETS_SELECT_ID}"></select>
             <button id="${Constants.SAVE_PRESET_BTN_ID}" type="button">New</button>
             <button id="${Constants.DELETE_PRESET_BTN_ID}" type="button">Delete</button>
+
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+              ${VolumeSlider(Constants.VOLUME_SLIDER_ID, Constants.VOLUME_INPUT_ID)}
+            </div>
           </div>
-          <div class="sliders-row">
-            ${VolumeSlider(Constants.VOLUME_SLIDER_ID, Constants.VOLUME_INPUT_ID)}
-            <div class="vertical-divider"></div>
-            ${slidersConfig.map((cfg) => Slider(cfg.idx, cfg.freq)).join("")}
-          </div>
+
+          <!-- Parametric Equalizer Dual-Pane Editor -->
+          <div id="peq-editor-container"></div>
         </div>
       </div>
 
@@ -330,6 +321,12 @@ class PopupManager {
     this.allowlistCountSpan = document.getElementById(
       "allowlist-count"
     ) as HTMLSpanElement;
+
+    // Initialize Parametric Equalizer Component
+    const peqContainer = document.getElementById("peq-editor-container")!;
+    this.peqEditor = new ParametricEqEditor(peqContainer, (filters) => {
+      this.onFiltersChanged(filters);
+    });
   }
 
   private initEventListeners() {
@@ -393,67 +390,6 @@ class PopupManager {
     this.modalCancelBtn.onclick = () => this.presetModal.close();
     this.modalSaveBtn.addEventListener("click", () => this.saveNewPreset());
 
-    slidersConfig.forEach((cfg) => {
-      const idx = cfg.idx;
-      const sliderElem = document.getElementById(`slider${idx}`) as HTMLInputElement;
-      const inputElem = document.getElementById(`input${idx}`) as HTMLInputElement;
-      const filterTypeElem = document.getElementById(`filter-type-${idx}`) as HTMLSelectElement;
-      const qInputElem = document.getElementById(`q-input-${idx}`) as HTMLInputElement;
-
-      sliderElem.oninput = () => {
-        inputElem.value = sliderElem.value;
-        this.handleEqChanges();
-      };
-
-      inputElem.addEventListener("input", () => {
-        let val = parseFloat(inputElem.value);
-        if (isNaN(val)) val = 0;
-        val = Math.max(Number(sliderElem.min), Math.min(Number(sliderElem.max), val));
-        sliderElem.value = val.toString();
-        inputElem.value = sliderElem.value;
-        this.handleEqChanges();
-      });
-
-      filterTypeElem.addEventListener("change", () => this.handleEqChanges());
-
-      qInputElem.addEventListener("input", () => {
-        let val = parseFloat(qInputElem.value);
-        if (isNaN(val)) val = 1.0;
-        val = Math.max(0.1, Math.min(10, val));
-        qInputElem.value = val.toString();
-        this.handleEqChanges();
-      });
-
-      qInputElem.addEventListener("blur", () => {
-        let val = parseFloat(qInputElem.value);
-        if (isNaN(val)) val = 1.0;
-        val = Math.max(0.1, Math.min(10, val));
-        qInputElem.value = val.toString();
-      });
-
-      const handleWheel = (
-        e: WheelEvent,
-        el: HTMLInputElement,
-        step: number,
-        min: number,
-        max: number
-      ) => {
-        e.preventDefault();
-        let val = parseFloat(el.value);
-        if (isNaN(val)) val = 0;
-        val += e.deltaY < 0 ? step : -step;
-        val = Math.max(min, Math.min(max, Math.round(val * 100) / 100));
-        el.value = val.toString();
-        if (el === inputElem) sliderElem.value = el.value;
-        if (el === sliderElem) inputElem.value = el.value;
-        this.handleEqChanges();
-      };
-
-      qInputElem.addEventListener("wheel", (e) => handleWheel(e, qInputElem, 0.01, 0.1, 10));
-      inputElem.addEventListener("wheel", (e) => handleWheel(e, inputElem, 0.05, -12, 12));
-      sliderElem.addEventListener("wheel", (e) => handleWheel(e, sliderElem, 0.05, -12, 12));
-    });
-
     // Volume Events
     this.volumeSlider.oninput = () => {
       const pos = parseFloat(this.volumeSlider.value);
@@ -512,15 +448,20 @@ class PopupManager {
   }
 
   private async loadData() {
-    await this.updateCurrentSite(); // sets this.currentHostname
+    await this.updateCurrentSite();
 
     this.userPresets = await StorageService.getUserPresets();
     this.updatePresetsSelector();
 
-    const selectedPreset =
-      (await StorageService.getSelectedPreset()) || defaultPresets[0].name;
+    const selectedPreset = (await StorageService.getSelectedPreset()) || defaultPresets[0].name;
     this.presetsSelect.value = selectedPreset;
-    this.setSlidersFromPreset(selectedPreset);
+
+    const savedFilters = await StorageService.getCurrentFilters();
+    if (Array.isArray(savedFilters)) {
+      this.peqEditor.setFilters(savedFilters);
+    } else {
+      this.loadFiltersFromPreset(selectedPreset);
+    }
 
     this.eqEnabled = await StorageService.getEqEnabled();
     this.filterMode = await StorageService.getFilterMode();
@@ -667,19 +608,11 @@ class PopupManager {
     const domainText = this.currentHostname || "this site";
 
     if (this.filterMode === "blocklist") {
-      this.toggleCurrentSiteBtn.textContent = isListed
-        ? `Unblock ${domainText}`
-        : `Block ${domainText}`;
-      this.settingsToggleCurrentBtn.textContent = isListed
-        ? `Remove from Blocklist`
-        : `Add to Blocklist`;
+      this.toggleCurrentSiteBtn.textContent = isListed ? `Unblock ${domainText}` : `Block ${domainText}`;
+      this.settingsToggleCurrentBtn.textContent = isListed ? `Remove from Blocklist` : `Add to Blocklist`;
     } else {
-      this.toggleCurrentSiteBtn.textContent = isListed
-        ? `Remove ${domainText} from Allowlist`
-        : `Allow ${domainText}`;
-      this.settingsToggleCurrentBtn.textContent = isListed
-        ? `Remove from Allowlist`
-        : `Add to Allowlist`;
+      this.toggleCurrentSiteBtn.textContent = isListed ? `Remove ${domainText} from Allowlist` : `Allow ${domainText}`;
+      this.settingsToggleCurrentBtn.textContent = isListed ? `Remove from Allowlist` : `Add to Allowlist`;
     }
 
     // Settings status badge & domain display
@@ -700,18 +633,10 @@ class PopupManager {
     }
 
     // Render lists
-    this.renderDomainList(
-      this.blocklistItemsContainer,
-      this.blockList,
-      (d) => this.removeDomainFromBlocklist(d)
-    );
+    this.renderDomainList(this.blocklistItemsContainer, this.blockList, (d) => this.removeDomainFromBlocklist(d));
     this.blocklistCountSpan.textContent = this.blockList.length.toString();
 
-    this.renderDomainList(
-      this.allowlistItemsContainer,
-      this.allowList,
-      (d) => this.removeDomainFromAllowlist(d)
-    );
+    this.renderDomainList(this.allowlistItemsContainer, this.allowList, (d) => this.removeDomainFromAllowlist(d));
     this.allowlistCountSpan.textContent = this.allowList.length.toString();
   }
 
@@ -778,24 +703,13 @@ class PopupManager {
     this.presetsSelect.appendChild(defaultGroup);
   }
 
-  private setSlidersFromPreset(presetName: string) {
+  private loadFiltersFromPreset(presetName: string) {
     const allPresets = [...defaultPresets, ...this.userPresets];
-    const preset =
-      allPresets.find((p) => p.name === presetName) || defaultPresets[0];
-
-    preset.filters.forEach((filter, i) => {
-      const idx = i + 1;
-      (document.getElementById(`slider${idx}`) as HTMLInputElement).value =
-        filter.gain.toString();
-      (document.getElementById(`input${idx}`) as HTMLInputElement).value =
-        filter.gain.toString();
-      (
-        document.getElementById(`filter-type-${idx}`) as HTMLSelectElement
-      ).value = filter.type;
-      (document.getElementById(`q-input-${idx}`) as HTMLInputElement).value =
-        filter.Q.toString();
-    });
+    const preset = allPresets.find((p) => p.name === presetName) || defaultPresets[0];
+    const normalized = normalizeFilters(preset.filters);
+    this.peqEditor.setFilters(normalized);
     this.updateDeleteButtonState();
+    StorageService.setCurrentFilters(normalized);
   }
 
   private updateDeleteButtonState() {
@@ -807,8 +721,7 @@ class PopupManager {
   private handlePresetChange() {
     const name = this.presetsSelect.value;
     StorageService.setSelectedPreset(name);
-    this.setSlidersFromPreset(name);
-    this.updateCurrentFilters();
+    this.loadFiltersFromPreset(name);
   }
 
   private openPresetModal() {
@@ -825,7 +738,7 @@ class PopupManager {
 
     const newPreset: FilterPreset = {
       name,
-      filters: this.getCurrentFiltersFromUI(),
+      filters: this.peqEditor.getFilters(),
     };
     this.userPresets.push(newPreset);
     await StorageService.setUserPresets(this.userPresets);
@@ -839,74 +752,44 @@ class PopupManager {
 
   private async deletePreset() {
     const name = this.presetsSelect.value;
-    
     const isUser = this.userPresets.some((p) => p.name === name);
-    if (!isUser || name === CUSTOM_PRESET_NAME) {
-      return;
-    }
+    if (!isUser || name === CUSTOM_PRESET_NAME) return;
 
     this.userPresets = this.userPresets.filter((p) => p.name !== name);
     await StorageService.setUserPresets(this.userPresets);
     this.updatePresetsSelector();
+
     const nextPreset = defaultPresets[0].name;
     this.presetsSelect.value = nextPreset;
     await StorageService.setSelectedPreset(nextPreset);
-    this.setSlidersFromPreset(nextPreset);
-    this.updateCurrentFilters();
+    this.loadFiltersFromPreset(nextPreset);
   }
 
-  private getCurrentFiltersFromUI() {
-    return slidersConfig.map((_, i) => ({
-      freq: slidersConfig[i].freq,
-      gain: parseFloat(
-        (document.getElementById(`slider${i + 1}`) as HTMLInputElement).value
-      ),
-      Q: parseFloat(
-        (document.getElementById(`q-input-${i + 1}`) as HTMLInputElement).value
-      ),
-      type: (
-        document.getElementById(`filter-type-${i + 1}`) as HTMLSelectElement
-      ).value as BiquadFilterType,
-    }));
-  }
-
-  private updateCurrentFilters() {
-    StorageService.setCurrentFilters(this.getCurrentFiltersFromUI());
-  }
-
-  private handleEqChanges() {
-    this.autosavePreset();
-    this.updateCurrentFilters();
+  private onFiltersChanged(filters: Filter[]) {
+    StorageService.setCurrentFilters(filters);
+    this.autosavePreset(filters);
   }
 
   private handleVolumeChanges(gain?: number) {
-    const vol =
-      gain !== undefined
-        ? gain
-        : 6 * Math.pow(parseFloat(this.volumeSlider.value), 2.585);
+    const vol = gain !== undefined ? gain : 6 * Math.pow(parseFloat(this.volumeSlider.value), 2.585);
     StorageService.setVolume(this.currentHostname, vol);
   }
 
-  private async autosavePreset() {
+  private async autosavePreset(filters: Filter[]) {
     const name = this.presetsSelect.value;
-    const filters = this.getCurrentFiltersFromUI();
     const isUser = this.userPresets.some((p) => p.name === name);
 
     if (isUser) {
       const idx = this.userPresets.findIndex((p) => p.name === name);
       if (idx !== -1) this.userPresets[idx].filters = filters;
 
-      const customIdx = this.userPresets.findIndex(
-        (p) => p.name === CUSTOM_PRESET_NAME
-      );
+      const customIdx = this.userPresets.findIndex((p) => p.name === CUSTOM_PRESET_NAME);
       if (customIdx !== -1) this.userPresets[customIdx].filters = filters;
       else this.userPresets.push({ name: CUSTOM_PRESET_NAME, filters });
 
       await StorageService.setUserPresets(this.userPresets);
     } else {
-      const customIdx = this.userPresets.findIndex(
-        (p) => p.name === CUSTOM_PRESET_NAME
-      );
+      const customIdx = this.userPresets.findIndex((p) => p.name === CUSTOM_PRESET_NAME);
       if (customIdx !== -1) this.userPresets[customIdx].filters = filters;
       else this.userPresets.push({ name: CUSTOM_PRESET_NAME, filters });
 

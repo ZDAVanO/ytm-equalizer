@@ -1,8 +1,10 @@
 export interface Filter {
+  id?: string;
   freq: number;
   gain: number;
   Q: number;
   type: BiquadFilterType;
+  enabled?: boolean;
 }
 
 export interface FilterPreset {

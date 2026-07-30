@@ -20,8 +20,6 @@ export const filterTypeShort: Record<BiquadFilterType, string> = {
   allpass: "AP",
 };
 
-
-// Add filter type descriptions for tooltips
 export const filterTypeDescriptions: Record<string, string> = {
   lowpass: "Lowpass: Passes frequencies below cutoff.",
   highpass: "Highpass: Passes frequencies above cutoff.",
@@ -30,5 +28,21 @@ export const filterTypeDescriptions: Record<string, string> = {
   highshelf: "Highshelf: Boosts/cuts frequencies above cutoff.",
   peaking: "Peaking: Boosts/cuts frequencies around center frequency.",
   notch: "Notch: Attenuates frequencies around center frequency.",
-  allpass: "Allpass: Passes all frequencies, changes phase only."
+  allpass: "Allpass: Passes all frequencies, changes phase only.",
 };
+
+export function filterHasGain(type: BiquadFilterType): boolean {
+  return type === "peaking" || type === "lowshelf" || type === "highshelf";
+}
+
+export function filterHasQ(type: BiquadFilterType): boolean {
+  return type !== "lowshelf" && type !== "highshelf";
+}
+
+export function formatFrequency(freq: number): string {
+  if (freq >= 1000) {
+    const k = freq / 1000;
+    return `${k >= 10 ? Math.round(k) : k.toFixed(1)}k`;
+  }
+  return `${Math.round(freq)}`;
+}

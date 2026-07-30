@@ -83,6 +83,11 @@ export class StorageService {
     }
   }
 
+  static async getCurrentFilters(): Promise<Filter[]> {
+    const data = await chrome.storage.local.get("currentFilters");
+    return normalizeFilters(data.currentFilters);
+  }
+
   static async setCurrentFilters(filters: Filter[]): Promise<void> {
     devLog('[StorageService] setCurrentFilters:', filters);
     await chrome.storage.local.set({ currentFilters: filters });
@@ -100,6 +105,37 @@ export class StorageService {
     siteVolumes[hostname] = volume;
     await chrome.storage.local.set({ siteVolumes });
   }
+}
+
+export function normalizeFilters(filters: any[]): Filter[] {
+  const stdFreqs = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+  if (!Array.isArray(filters)) {
+    return stdFreqs.map((freq) => ({
+      freq,
+      gain: 0,
+      Q: 1.0,
+      type: "peaking",
+    }));
+  }
+
+  return filters.map((f, i) => {
+    if (typeof f === "number") {
+      return {
+        freq: stdFreqs[i] || 1000,
+        gain: f,
+        Q: 1.0,
+        type: "peaking",
+        enabled: true,
+      };
+    }
+    return {
+      freq: typeof f.freq === "number" ? f.freq : stdFreqs[i] || 1000,
+      gain: typeof f.gain === "number" ? f.gain : 0,
+      Q: typeof f.Q === "number" ? f.Q : 1.0,
+      type: f.type || "peaking",
+      enabled: f.enabled !== false,
+    };
+  });
 }
 
 

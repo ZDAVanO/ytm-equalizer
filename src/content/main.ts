@@ -10,7 +10,6 @@ import {
   applyEqualizer,
   disableEqualizer,
   applyEQIfPlaying,
-  equalizerFilters,
   // lastPlayedElement,
   setLastPlayedElement,
   toggleEQForAll,
@@ -65,7 +64,7 @@ chrome.runtime.sendMessage({ action: "get_tab_hostname" }, (response) => {
                 updateVolume(volume);
                 devLog('[content] Re-loaded site volume for:', currentHostname, volume);
             }
-            if (data.filterMode) filterMode = data.filterMode;
+            if (data.filterMode) filterMode = data.filterMode === 'allowlist' ? 'allowlist' : 'blocklist';
             if (Array.isArray(data.blockList)) blockList = data.blockList;
             if (Array.isArray(data.allowList)) allowList = data.allowList;
             if (typeof data.eqEnabled === 'boolean') masterEqEnabled = data.eqEnabled;

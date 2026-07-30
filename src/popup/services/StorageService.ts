@@ -85,7 +85,7 @@ export class StorageService {
 
   static async getCurrentFilters(): Promise<Filter[]> {
     const data = await chrome.storage.local.get("currentFilters");
-    return normalizeFilters(data.currentFilters);
+    return normalizeFilters(Array.isArray(data.currentFilters) ? data.currentFilters : []);
   }
 
   static async setCurrentFilters(filters: Filter[]): Promise<void> {

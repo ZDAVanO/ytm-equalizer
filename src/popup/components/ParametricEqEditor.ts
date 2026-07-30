@@ -8,18 +8,18 @@ export class ParametricEqEditor {
   private onChange: (filters: Filter[]) => void;
 
   // DOM Elements
-  private rootElement!: HTMLElement;
-  private tableContainer!: HTMLElement;
   private filterListBody!: HTMLElement;
   private canvas!: HTMLCanvasElement;
   private ctx!: CanvasRenderingContext2D;
   private handlesOverlay!: HTMLElement;
 
-  // Dragging state
+  // Dragging state & Caching flags
   private isDragging = false;
   private activeDragIndex: number | null = null;
   private pendingMouseMove: MouseEvent | null = null;
   private rafPending = false;
+  private isResponseDirty = true;
+  private handlesDirty = true;
 
   // Visualizer
   private analyser: AnalyserNode | null = null;
@@ -65,6 +65,8 @@ export class ParametricEqEditor {
     if (this.selectedIndex !== null && this.selectedIndex >= this.filters.length) {
       this.selectedIndex = this.filters.length > 0 ? 0 : null;
     }
+    this.isResponseDirty = true;
+    this.handlesDirty = true;
     this.renderFilterList();
     this.drawGraph();
   }
@@ -142,8 +144,6 @@ export class ParametricEqEditor {
       </div>
     `;
 
-    this.rootElement = this.container.querySelector(".peq-editor") as HTMLElement;
-    this.tableContainer = this.container.querySelector(".peq-table-container") as HTMLElement;
     this.filterListBody = this.container.querySelector("#peq-filter-list") as HTMLElement;
     this.canvas = this.container.querySelector("#peq-graph-canvas") as HTMLCanvasElement;
     this.ctx = this.canvas.getContext("2d")!;
@@ -159,6 +159,7 @@ export class ParametricEqEditor {
     const dpr = window.devicePixelRatio || 1;
     this.canvas.width = rect.width * dpr;
     this.canvas.height = rect.height * dpr;
+    this.handlesDirty = true;
     this.drawGraph();
   }
 
@@ -452,23 +453,12 @@ export class ParametricEqEditor {
     return this.MIN_DB + clampedRatio * (this.MAX_DB - this.MIN_DB);
   }
 
-  // MARK: Graph Rendering
-  private drawGraph() {
-    if (!this.canvas || !this.ctx) return;
-    const width = this.canvas.width;
-    const height = this.canvas.height;
-    const cssWidth = this.canvas.offsetWidth;
-    const cssHeight = this.canvas.offsetHeight;
+  private computeResponseCurve() {
+    if (!this.isResponseDirty) return;
 
-    this.ctx.clearRect(0, 0, width, height);
+    // Reset OfflineAudioContext to force garbage collection of old BiquadFilterNodes
+    this.offlineAudioCtx = new OfflineAudioContext(1, 1, 44100);
 
-    // 1. Draw Grid Lines & Labels
-    this.drawGrid(width, height);
-
-    // 2. Draw visualizer bars (behind EQ curve)
-    this.drawVisualizer(width, height);
-
-    // 3. Compute Combined Frequency Response
     this.totalDbResponse.fill(0);
     this.filters.forEach((filter) => {
       try {
@@ -489,6 +479,28 @@ export class ParametricEqEditor {
         console.warn("Error computing frequency response:", err);
       }
     });
+
+    this.isResponseDirty = false;
+  }
+
+  // MARK: Graph Rendering
+  private drawGraph() {
+    if (!this.canvas || !this.ctx) return;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const cssWidth = this.canvas.offsetWidth;
+    const cssHeight = this.canvas.offsetHeight;
+
+    this.ctx.clearRect(0, 0, width, height);
+
+    // 1. Draw Grid Lines & Labels
+    this.drawGrid(width, height);
+
+    // 2. Draw visualizer bars (behind EQ curve)
+    this.drawVisualizer(width, height);
+
+    // 3. Compute Combined Frequency Response (cached)
+    this.computeResponseCurve();
 
     // 3. Draw Frequency Response Curve
     this.ctx.beginPath();
@@ -581,7 +593,6 @@ export class ParametricEqEditor {
     this.analyser.getByteFrequencyData(this.vizDataArray);
 
     const sampleRate = this.analyser.context.sampleRate;
-    const fftSize = this.analyser.fftSize;
     const binCount = this.analyser.frequencyBinCount;
 
     // Build gradient: teal/cyan bottom → transparent top
@@ -629,30 +640,42 @@ export class ParametricEqEditor {
   }
 
   private renderHandlesOverlay(cssWidth: number, cssHeight: number) {
-    this.handlesOverlay.innerHTML = "";
+    const existingHandles = Array.from(this.handlesOverlay.children) as HTMLElement[];
+    const needsRebuild =
+      existingHandles.length !== this.filters.length ||
+      existingHandles.some((h, idx) => {
+        const isSelected = this.selectedIndex === idx;
+        return h.classList.contains("selected") !== isSelected;
+      });
 
-    // Half the handle diameter — keeps the circle fully inside the frame
-    const HANDLE_R = 12;
+    if (needsRebuild) {
+      this.handlesOverlay.innerHTML = "";
+      this.filters.forEach((_filter, idx) => {
+        const isSelected = this.selectedIndex === idx;
+        const handle = document.createElement("div");
+        handle.className = `peq-handle ${isSelected ? "selected" : ""}`;
+        handle.dataset.index = idx.toString();
+        handle.innerHTML = `<span class="peq-handle-num">${idx + 1}</span>`;
+        this.handlesOverlay.appendChild(handle);
+      });
+      this.handlesDirty = true;
+    }
 
-    this.filters.forEach((filter, idx) => {
-      const x = this.freqToX(filter.freq, cssWidth);
-      const db = filterHasGain(filter.type) ? filter.gain : 0;
-      const y = this.dbToY(db, cssHeight);
-      const isSelected = this.selectedIndex === idx;
+    if (this.handlesDirty) {
+      const HANDLE_R = 12;
+      const handles = Array.from(this.handlesOverlay.children) as HTMLElement[];
+      this.filters.forEach((filter, idx) => {
+        const handle = handles[idx];
+        if (!handle) return;
+        const x = this.freqToX(filter.freq, cssWidth);
+        const db = filterHasGain(filter.type) ? filter.gain : 0;
+        const y = this.dbToY(db, cssHeight);
 
-      const handle = document.createElement("div");
-      handle.className = `peq-handle ${isSelected ? "selected" : ""}`;
-      // Clamp visually so the circle is never clipped by the frame
-      handle.style.left = `${Math.max(HANDLE_R, Math.min(cssWidth - HANDLE_R, x))}px`;
-      handle.style.top = `${Math.max(HANDLE_R, Math.min(cssHeight - HANDLE_R, y))}px`;
-      handle.dataset.index = idx.toString();
-
-      handle.innerHTML = `
-        <span class="peq-handle-num">${idx + 1}</span>
-      `;
-
-      this.handlesOverlay.appendChild(handle);
-    });
+        handle.style.left = `${Math.max(HANDLE_R, Math.min(cssWidth - HANDLE_R, x))}px`;
+        handle.style.top = `${Math.max(HANDLE_R, Math.min(cssHeight - HANDLE_R, y))}px`;
+      });
+      this.handlesDirty = false;
+    }
   }
 
 
@@ -746,11 +769,15 @@ export class ParametricEqEditor {
   }
 
   private onParamInput() {
+    this.isResponseDirty = true;
+    this.handlesDirty = true;
     this.drawGraph();
     this.onChange(this.filters);
   }
 
   private notifyChange() {
+    this.isResponseDirty = true;
+    this.handlesDirty = true;
     this.renderFilterList();
     this.drawGraph();
     this.onChange(this.filters);

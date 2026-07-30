@@ -6,6 +6,7 @@ import defaultPresets, { presetDisplayNames, localDevPresets } from "./defaultPr
 import { StorageService, matchesDomain, normalizeFilters } from "./services/StorageService";
 import { VolumeSlider } from "./components/VolumeSlider";
 import { ParametricEqEditor } from "./components/ParametricEqEditor";
+import { PopupVisualizer } from "./components/PopupVisualizer";
 import { FilterPreset, Filter, FilterMode } from "./types";
 
 const CUSTOM_PRESET_NAME = "[Custom]";
@@ -13,6 +14,7 @@ const CUSTOM_PRESET_NAME = "[Custom]";
 class PopupManager {
   private userPresets: FilterPreset[] = [];
   private peqEditor!: ParametricEqEditor;
+  private visualizer!: PopupVisualizer;
 
   private eqToggle!: HTMLButtonElement;
   private eqDropdownBtn!: HTMLButtonElement;
@@ -327,6 +329,11 @@ class PopupManager {
     this.peqEditor = new ParametricEqEditor(peqContainer, (filters) => {
       this.onFiltersChanged(filters);
     });
+
+    // Initialize Popup Visualizer (captures audio from the active tab via tabCapture)
+    this.visualizer = new PopupVisualizer((analyser) => {
+      this.peqEditor.setAnalyser(analyser);
+    });
   }
 
   private initEventListeners() {
@@ -475,6 +482,9 @@ class PopupManager {
     const pos = Math.pow(volume / 6, 1 / 2.585);
     this.volumeSlider.value = pos.toString();
     this.volumeInput.value = volume.toFixed(2);
+
+    // Start audio capture for popup visualizer
+    this.visualizer.start();
   }
 
   private async updateCurrentSite() {

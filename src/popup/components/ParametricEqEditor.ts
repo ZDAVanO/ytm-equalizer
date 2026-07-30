@@ -21,6 +21,11 @@ export class ParametricEqEditor {
   private pendingMouseMove: MouseEvent | null = null;
   private rafPending = false;
 
+  // Visualizer
+  private analyser: AnalyserNode | null = null;
+  private vizDataArray: Uint8Array | null = null;
+  private vizRafId: number | null = null;
+
   // Web Audio Offline Context for frequency response calculation
   private offlineAudioCtx = new OfflineAudioContext(1, 1, 44100);
   private numSamplePoints = 256;
@@ -61,6 +66,35 @@ export class ParametricEqEditor {
     }
     this.renderFilterList();
     this.drawGraph();
+  }
+
+  public setAnalyser(analyser: AnalyserNode | null) {
+    this.analyser = analyser;
+    if (analyser) {
+      this.vizDataArray = new Uint8Array(analyser.frequencyBinCount);
+      this.startVizLoop();
+    } else {
+      this.stopVizLoop();
+      this.vizDataArray = null;
+      // Redraw once to clear visualizer bars
+      this.drawGraph();
+    }
+  }
+
+  private startVizLoop() {
+    if (this.vizRafId !== null) return;
+    const loop = () => {
+      this.drawGraph();
+      this.vizRafId = requestAnimationFrame(loop);
+    };
+    this.vizRafId = requestAnimationFrame(loop);
+  }
+
+  private stopVizLoop() {
+    if (this.vizRafId !== null) {
+      cancelAnimationFrame(this.vizRafId);
+      this.vizRafId = null;
+    }
   }
 
   public getFilters(): Filter[] {
@@ -429,7 +463,10 @@ export class ParametricEqEditor {
     // 1. Draw Grid Lines & Labels
     this.drawGrid(width, height);
 
-    // 2. Compute Combined Frequency Response
+    // 2. Draw visualizer bars (behind EQ curve)
+    this.drawVisualizer(width, height);
+
+    // 3. Compute Combined Frequency Response
     this.totalDbResponse.fill(0);
     this.filters.forEach((filter) => {
       try {
@@ -522,6 +559,41 @@ export class ParametricEqEditor {
         this.ctx.fillText(formatFrequency(freq) + " Hz", x + 4 * dpr, height - 6 * dpr);
       }
     });
+  }
+
+  private drawVisualizer(width: number, height: number) {
+    if (!this.analyser || !this.vizDataArray) return;
+
+    this.analyser.getByteFrequencyData(this.vizDataArray);
+
+    const sampleRate = this.analyser.context.sampleRate;
+    const fftSize = this.analyser.fftSize;
+    const binCount = this.analyser.frequencyBinCount;
+
+    // Bottom padding matches dbToY padding so bars don't overflow the grid
+    const padding = 20;
+    const drawableHeight = height - padding * 2;
+
+    // Build gradient: teal/cyan bottom → transparent top
+    const gradient = this.ctx.createLinearGradient(0, height - padding, 0, padding);
+    gradient.addColorStop(0, "rgba(56, 189, 248, 0.55)");
+    gradient.addColorStop(0.5, "rgba(56, 189, 248, 0.20)");
+    gradient.addColorStop(1, "rgba(56, 189, 248, 0.04)");
+    this.ctx.fillStyle = gradient;
+
+    // Map each horizontal pixel to a log-scale frequency,
+    // then find the FFT bin, and draw a 1-pixel-wide bar.
+    for (let px = 0; px < width; px++) {
+      const freq = this.xToFreq(px, width);
+      // Bin index for this frequency
+      const binIndex = Math.min(binCount - 1, Math.round((freq / (sampleRate / 2)) * binCount));
+      const amplitude = this.vizDataArray[binIndex] / 255; // 0..1
+      if (amplitude < 0.01) continue;
+
+      const barH = amplitude * drawableHeight;
+      const y = height - padding - barH;
+      this.ctx.fillRect(px, y, 1, barH);
+    }
   }
 
   private renderHandlesOverlay(cssWidth: number, cssHeight: number) {

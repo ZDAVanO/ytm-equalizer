@@ -31,6 +31,7 @@ export default defineManifest({
   permissions: [
     'storage',
     'tabs',
+    'tabCapture',
   ],
 
   background: {

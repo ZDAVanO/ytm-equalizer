@@ -2,7 +2,7 @@ import "./style.css";
 import ytm_eq_icon from "@/assets/icon-128.png";
 import { version } from "../../package.json";
 import * as Constants from "@constants";
-import defaultPresets, { presetDisplayNames } from "./defaultPresets";
+import defaultPresets, { presetDisplayNames, localDevPresets } from "./defaultPresets";
 import { StorageService, matchesDomain, normalizeFilters } from "./services/StorageService";
 import { VolumeSlider } from "./components/VolumeSlider";
 import { ParametricEqEditor } from "./components/ParametricEqEditor";
@@ -694,6 +694,16 @@ class PopupManager {
       this.presetsSelect.appendChild(userGroup);
     }
 
+    if (localDevPresets.length > 0) {
+      const localGroup = document.createElement("optgroup");
+      localGroup.label = "Local presets";
+      localDevPresets.forEach((p) => {
+        const displayName = presetDisplayNames[p.name] || p.name;
+        localGroup.appendChild(createOption(p.name, displayName));
+      });
+      this.presetsSelect.appendChild(localGroup);
+    }
+
     const defaultGroup = document.createElement("optgroup");
     defaultGroup.label = "Predefined presets";
     defaultPresets.forEach((p) => {
@@ -704,7 +714,7 @@ class PopupManager {
   }
 
   private loadFiltersFromPreset(presetName: string) {
-    const allPresets = [...defaultPresets, ...this.userPresets];
+    const allPresets = [...this.userPresets, ...localDevPresets, ...defaultPresets];
     const preset = allPresets.find((p) => p.name === presetName) || defaultPresets[0];
     const normalized = normalizeFilters(preset.filters);
     this.peqEditor.setFilters(normalized);
@@ -733,7 +743,7 @@ class PopupManager {
   private async saveNewPreset() {
     const name = this.presetNameInput.value.trim();
     if (!name) return alert("Enter a name for your preset.");
-    if ([...defaultPresets, ...this.userPresets].some((p) => p.name === name))
+    if ([...defaultPresets, ...localDevPresets, ...this.userPresets].some((p) => p.name === name))
       return alert("Preset name already exists.");
 
     const newPreset: FilterPreset = {

@@ -79,6 +79,7 @@ const defaultPresets: FilterPreset[] = [
       { freq: 16000, gain: -0.4, Q: 1.0, type: "peaking" },
     ],
   },
+
   {
     name: "bassReducer",
     filters: [
@@ -485,5 +486,23 @@ const defaultPresets: FilterPreset[] = [
     ],
   },
 ];
+
+export const localDevPresets: FilterPreset[] = [];
+
+interface LocalPresetModule {
+  devPresets?: FilterPreset[];
+  devPresetDisplayNames?: Record<string, string>;
+}
+
+const localModules = import.meta.glob<LocalPresetModule>("./*.local.ts", { eager: true });
+for (const path in localModules) {
+  const mod = localModules[path];
+  if (mod.devPresets) {
+    localDevPresets.push(...mod.devPresets);
+  }
+  if (mod.devPresetDisplayNames) {
+    Object.assign(presetDisplayNames, mod.devPresetDisplayNames);
+  }
+}
 
 export default defaultPresets;

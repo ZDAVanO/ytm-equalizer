@@ -73,16 +73,16 @@ export class ParametricEqEditor {
           <div class="peq-table-container">
             <table class="peq-table">
               <colgroup>
+                <col style="width: 18px">
                 <col style="width: 22px">
-                <col style="width: 22px">
-                <col style="width: 40px">
-                <col style="width: 24px">
-                <col style="width: 34px">
+                <col style="width: 32px">
+                <col style="width: 26px">
+                <col style="width: 26px">
                 <col style="width: 20px">
               </colgroup>
               <thead>
                 <tr>
-                  <th colspan="2">Фільтр</th>
+                  <th colspan="2">Filter</th>
                   <th>Freq</th>
                   <th>Gain</th>
                   <th>Q</th>

@@ -132,7 +132,7 @@ button {
   border: 1px solid transparent;
   padding: 7px 15px;
   font-size: 1em;
-  font-weight: 500;
+  /* font-weight: 500; */
   font-family: inherit;
   background-color: #1a1a1a;
   cursor: pointer;
@@ -146,15 +146,26 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+.card button {
+  height: 32px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+}
+
 /* Split Button & Dropdown */
 .split-btn-group {
   display: inline-flex;
   align-items: stretch;
   position: relative;
-  margin-right: auto;
 }
 
 .split-btn-main {
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 12px;
   border-top-right-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
   border-right: 1px solid #242424;
@@ -162,10 +173,12 @@ button:focus-visible {
 }
 
 .split-btn-arrow {
+  height: 32px;
+  box-sizing: border-box;
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
-  padding: 7px 9px !important;
-  display: flex;
+  padding: 0 8px !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
@@ -449,17 +462,23 @@ button:focus-visible {
 }
 
 .domain-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: #8e8e93;
-  font-size: 18px;
-  padding: 0 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color 0.15s, background-color 0.15s;
 }
 
 .domain-remove-btn:hover {
   color: #fa486f;
+  background-color: rgba(250, 72, 111, 0.16);
 }
 
 .empty-list-msg {
@@ -544,10 +563,10 @@ button.current-site-label {
   color: #919191;
   background: #1a1a1a;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid transparent;
-  max-width: 500px;
-  height: 30px;
+  max-width: 180px;
+  height: 32px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -556,11 +575,17 @@ button.current-site-label {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: inherit;
-  font-size: inherit;
-  font-weight: 400;
+  /* font-size: 0.85em; */
+  /* font-weight: 500; */
   cursor: pointer;
   outline: none;
+  margin-right: auto;
   transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+button.current-site-label:hover {
+  border-color: #646cff;
+  color: #fff;
 }
 
 button.current-site-label.active {
@@ -568,7 +593,7 @@ button.current-site-label.active {
   color: #fa486f;
   border-color: #fa486f;
   box-shadow: 0 0 10px rgba(250, 72, 111, 0.25);
-  font-weight: 400;
+  /* font-weight: 500; */
 }
 
 
@@ -609,11 +634,13 @@ button.current-site-label.active {
 
 
 select#presets-select {
+  height: 32px;
+  box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid transparent;
-  padding: 6px 10px;
+  padding: 0 10px;
   font-size: 1em;
-  font-weight: 500;
+  /* font-weight: 500; */
   font-family: inherit;
   background-color: #1a1a1a;
   color: #fff;
@@ -735,14 +762,15 @@ dialog::backdrop {
 .peq-editor {
   display: flex;
   width: 100%;
-  height: 350px;
+  height: auto;
+  align-items: stretch;
   gap: 8px;
   /* margin-top: 4px; */
 }
 
 .peq-left-pane {
-  flex: 0 0 238px;
-  width: 238px;
+  flex: 0 0 auto;
+  width: fit-content;
   background: #1c1c1e;
   border: 1px solid #2c2c2e;
   border-radius: 12px;
@@ -752,12 +780,30 @@ dialog::backdrop {
   box-sizing: border-box;
 }
 
+.peq-row,
+.peq-add-row,
+.peq-empty-row {
+  height: 32px;
+  box-sizing: border-box;
+}
+
 .peq-row td,
-.peq-add-row td {
-  padding: 4px 1px;
+.peq-add-row td,
+.peq-empty-row td {
+  padding: 3px 1px;
+  height: 32px;
   vertical-align: middle;
   text-align: center;
   border-bottom: 1px solid #262628;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.peq-empty-spacer {
+  display: inline-block;
+  height: 24px;
+  width: 1px;
+  visibility: hidden;
 }
 
 .peq-table-add-btn {
@@ -766,29 +812,30 @@ dialog::backdrop {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  padding: 3px 2px;
+  height: 26px;
+  padding: 0 4px;
+  margin: 0;
   font-size: 12px;
   line-height: 1.2;
   font-weight: 600;
-  background: rgba(44, 44, 46, 0.6);
-  color: #fa486f;
-  border: 1px dashed #3a3a3c;
-  border-radius: 6px;
+  background: #2c2c2e;
+  color: #aaa;
+  border: 1px solid #3a3a3c;
+  border-radius: 8px;
   box-sizing: border-box;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .peq-table-add-btn:hover {
-  background: #fa486f;
+  background: #3a3a3c;
   color: #ffffff;
   border-color: #fa486f;
-  border-style: solid;
 }
 
 .peq-table-container {
   flex: 1;
-  overflow-y: auto;
+  overflow: visible;
   /* padding-right: 2px; */
 }
 
@@ -808,9 +855,8 @@ dialog::backdrop {
 }
 
 .peq-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  width: max-content;
+  border-collapse: collapse;
   font-size: 0.92em;
   table-layout: fixed;
 }
@@ -827,7 +873,7 @@ dialog::backdrop {
 
 .peq-row {
   transition: background 0.15s;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .peq-row:hover {
@@ -847,16 +893,19 @@ dialog::backdrop {
 
 .peq-table tbody tr:last-child td {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
 .peq-row td:first-child {
   border-top-left-radius: 6px;
   border-bottom-left-radius: 6px;
+  padding-left: 3px;
 }
 
 .peq-row td:last-child {
   border-top-right-radius: 6px;
   border-bottom-right-radius: 6px;
+  padding-right: 3px;
 }
 
 .peq-num-badge {
@@ -878,16 +927,18 @@ dialog::backdrop {
   background: #fa486f;
 }
 
-/* Custom Dark Select without arrow overlap */
+/* Custom Dark Select without heavy box background/borders */
 .peq-select {
-  background: #141416;
+  background: transparent;
   color: #ffffff;
-  border: 1px solid #3a3a3c;
+  border: 1px solid transparent;
   border-radius: 6px;
-  padding: 3px 2px;
+  height: 22px;
+  padding: 0 2px;
+  margin: 0;
   font-size: 12px;
-  line-height: 1.2;
-  font-weight: 700;
+  line-height: 20px;
+  /* font-weight: 700; */
   box-sizing: border-box;
   outline: none;
   cursor: pointer;
@@ -896,9 +947,16 @@ dialog::backdrop {
   text-align-last: center;
   -webkit-appearance: none;
   appearance: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.peq-select:hover:not(:focus) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .peq-select:focus {
+  background: #2c2c2e;
   border-color: #fa486f;
 }
 
@@ -909,20 +967,23 @@ dialog::backdrop {
 
 /* Number inputs without spin buttons taking up space */
 .peq-input {
-  background: #141416;
+  background: transparent;
   color: #ffffff;
-  border: 1px solid #3a3a3c;
+  border: 1px solid transparent;
   border-radius: 6px;
-  padding: 3px 2px;
+  height: 22px;
+  padding: 0 2px;
+  margin: 0;
   font-size: 12px;
-  line-height: 1.2;
-  font-weight: 600;
+  line-height: 20px;
+  /* font-weight: 600; */
   width: 100%;
   box-sizing: border-box;
   outline: none;
   text-align: center;
   font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .peq-input::-webkit-outer-spin-button,
@@ -931,30 +992,43 @@ dialog::backdrop {
   margin: 0;
 }
 
+.peq-input:not(:disabled):hover:not(:focus) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .peq-input:focus {
+  background: #2c2c2e;
   border-color: #fa486f;
 }
 
 .peq-input:disabled {
-  background: #262628;
+  background: transparent;
   color: #55555e;
-  border-color: #2c2c2e;
+  border-color: transparent;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .peq-del-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: #8e8e93;
-  font-size: 18px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
   cursor: pointer;
-  padding: 2px 4px;
-  line-height: 1;
-  transition: color 0.15s;
+  transition: color 0.15s, background-color 0.15s;
+  margin: 0 auto;
 }
 
 .peq-del-btn:hover {
   color: #fa486f;
+  background-color: rgba(250, 72, 111, 0.16);
 }
 
 /* Right Graph Pane (~65% width) */
@@ -1007,17 +1081,16 @@ dialog::backdrop {
 .peq-handle:active {
   cursor: grabbing;
   transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 0 10px rgba(250, 72, 111, 0.7);
 }
 
 .peq-handle.selected {
   background: #fa486f;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(250, 72, 111, 0.9);
+  box-shadow: 0 0 8px rgba(250, 72, 111, 0.55);
   z-index: 10;
 }
 
-/* Vertical Volume Slider Pane (to the right of interactive graph canvas) */
-/* Vertical Volume Slider Pane (to the right of interactive graph canvas) */
 /* Vertical Volume Slider Pane (to the right of interactive graph canvas) */
 .peq-vol-pane {
   flex: 0 0 46px;
@@ -1065,19 +1138,24 @@ dialog::backdrop {
   color: #aaa;
   font-variant-numeric: tabular-nums;
   user-select: none;
-  cursor: pointer;
+  cursor: default;
+  margin-top: 6px;
   transition: color 0.15s ease;
 }
 
-.vol-value-text:hover {
+.vol-value-text.modified {
   color: #fa486f;
 }
+
+/* .vol-value-text:hover {
+  color: #fa486f;
+} */
 
 .vol-reset-btn {
   height: 24px;
   width: 38px;
   padding: 0;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   background: #2c2c2e;
   color: #aaa;
@@ -1099,19 +1177,20 @@ dialog::backdrop {
 .vol-slider-wrapper {
   position: relative;
   flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin: 4px 0;
+  margin: 8px 0;
 }
 
 /* 0 dB Baseline Center Line (Matching Canvas 0 dB Grid Line Color #44444c) */
 .vol-zero-line {
   position: absolute;
   top: 50%;
-  left: 2px;
-  right: 2px;
+  left: 0;
+  right: 0;
   height: 1px;
   background-color: #44444c;
   pointer-events: none;
@@ -1125,13 +1204,17 @@ dialog::backdrop {
   direction: rtl;
   -webkit-appearance: none;
   appearance: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
   width: 24px;
   height: 100%;
-  max-height: 240px;
   background: transparent;
   cursor: grab;
   outline: none;
-  position: relative;
   z-index: 2;
 }
 
@@ -1173,14 +1256,14 @@ dialog::backdrop {
   background-color: #fa486f;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/%3E%3C/svg%3E");
   transform: scale(1.1);
-  box-shadow: 0 0 12px rgba(250, 72, 111, 0.9);
+  box-shadow: 0 0 8px rgba(250, 72, 111, 0.55);
 }
 
 .vol-range-vertical:active::-webkit-slider-thumb {
   background-color: #fa486f;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/%3E%3C/svg%3E");
   transform: scale(1.2);
-  box-shadow: 0 0 16px rgba(250, 72, 111, 1);
+  box-shadow: 0 0 10px rgba(250, 72, 111, 0.7);
 }
 
 /* Firefox Track & Thumb */
@@ -1210,14 +1293,14 @@ dialog::backdrop {
   background-color: #fa486f;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/%3E%3C/svg%3E");
   transform: scale(1.1);
-  box-shadow: 0 0 12px rgba(250, 72, 111, 0.9);
+  box-shadow: 0 0 8px rgba(250, 72, 111, 0.55);
 }
 
 .vol-range-vertical:active::-moz-range-thumb {
   background-color: #fa486f;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/%3E%3C/svg%3E");
   transform: scale(1.2);
-  box-shadow: 0 0 16px rgba(250, 72, 111, 1);
+  box-shadow: 0 0 10px rgba(250, 72, 111, 0.7);
 }
 
 

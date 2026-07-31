@@ -115,12 +115,12 @@ export class ParametricEqEditor {
           <div class="peq-table-container">
             <table class="peq-table">
               <colgroup>
-                <col style="width: 18px">
-                <col style="width: 22px">
+                <col style="width: 26px">
+                <col style="width: 26px">
+                <col style="width: 44px">
+                <col style="width: 38px">
                 <col style="width: 32px">
                 <col style="width: 26px">
-                <col style="width: 26px">
-                <col style="width: 20px">
               </colgroup>
               <thead>
                 <tr>
@@ -378,7 +378,8 @@ export class ParametricEqEditor {
       const delBtn = document.createElement("button");
       delBtn.className = "peq-del-btn";
       delBtn.title = "Delete filter";
-      delBtn.innerHTML = `&times;`;
+      delBtn.setAttribute("aria-label", "Delete filter");
+      delBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.filters.splice(idx, 1);
@@ -410,7 +411,24 @@ export class ParametricEqEditor {
       this.filterListBody.appendChild(row);
     });
 
-    if (this.filters.length < 10) {
+    // Render empty placeholder rows in the middle so the Add Filter button stays pinned at the bottom
+    const maxFilters = 10;
+    const currentCount = this.filters.length;
+    const emptyRowsNeeded = maxFilters - currentCount - (currentCount < maxFilters ? 1 : 0);
+    for (let i = 0; i < emptyRowsNeeded; i++) {
+      const emptyRow = document.createElement("tr");
+      emptyRow.className = "peq-empty-row";
+      for (let c = 0; c < 6; c++) {
+        const emptyTd = document.createElement("td");
+        emptyTd.className = "peq-empty-td";
+        emptyTd.innerHTML = `<span class="peq-empty-spacer">&nbsp;</span>`;
+        emptyRow.appendChild(emptyTd);
+      }
+      this.filterListBody.appendChild(emptyRow);
+    }
+
+    // Add Filter button pinned at the very bottom (Row 10)
+    if (currentCount < maxFilters) {
       const addRow = document.createElement("tr");
       addRow.className = "peq-add-row";
       const addTd = document.createElement("td");

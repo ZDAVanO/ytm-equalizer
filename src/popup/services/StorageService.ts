@@ -105,6 +105,121 @@ export class StorageService {
     siteVolumes[hostname] = volume;
     await chrome.storage.local.set({ siteVolumes });
   }
+
+  // Site Override Methods
+  static async isSiteOverrideActive(hostname: string): Promise<boolean> {
+    if (!hostname || hostname === "unknown" || hostname === "Browser page") return false;
+    const data = await chrome.storage.local.get("siteOverrides");
+    const siteOverrides: Record<string, boolean> = (data.siteOverrides as Record<string, boolean>) || {};
+    return Boolean(siteOverrides[hostname]);
+  }
+
+  static async setSiteOverrideActive(hostname: string, active: boolean): Promise<void> {
+    if (!hostname || hostname === "unknown" || hostname === "Browser page") return;
+    const data = await chrome.storage.local.get("siteOverrides");
+    const siteOverrides: Record<string, boolean> = (data.siteOverrides as Record<string, boolean>) || {};
+    siteOverrides[hostname] = active;
+    await chrome.storage.local.set({ siteOverrides });
+  }
+
+  static async getSiteFilters(hostname: string): Promise<Filter[] | null> {
+    if (!hostname) return null;
+    const data = await chrome.storage.local.get("siteFilters");
+    const siteFilters: Record<string, Filter[]> = (data.siteFilters as Record<string, Filter[]>) || {};
+    if (Array.isArray(siteFilters[hostname])) {
+      return normalizeFilters(siteFilters[hostname]);
+    }
+    return null;
+  }
+
+  static async setSiteFilters(hostname: string, filters: Filter[]): Promise<void> {
+    if (!hostname) return;
+    const data = await chrome.storage.local.get("siteFilters");
+    const siteFilters: Record<string, Filter[]> = (data.siteFilters as Record<string, Filter[]>) || {};
+    siteFilters[hostname] = filters;
+    await chrome.storage.local.set({ siteFilters });
+  }
+
+  static async getSitePreset(hostname: string): Promise<string | null> {
+    if (!hostname) return null;
+    const data = await chrome.storage.local.get("sitePresets");
+    const sitePresets: Record<string, string> = (data.sitePresets as Record<string, string>) || {};
+    return typeof sitePresets[hostname] === "string" ? sitePresets[hostname] : null;
+  }
+
+  static async setSitePreset(hostname: string, name: string): Promise<void> {
+    if (!hostname) return;
+    const data = await chrome.storage.local.get("sitePresets");
+    const sitePresets: Record<string, string> = (data.sitePresets as Record<string, string>) || {};
+    sitePresets[hostname] = name;
+    await chrome.storage.local.set({ sitePresets });
+  }
+
+  static async getEffectiveFilters(hostname: string): Promise<Filter[]> {
+    const isOverride = await StorageService.isSiteOverrideActive(hostname);
+    if (isOverride) {
+      const siteFilters = await StorageService.getSiteFilters(hostname);
+      if (siteFilters) return siteFilters;
+    }
+    return StorageService.getCurrentFilters();
+  }
+
+  static async setEffectiveFilters(hostname: string, filters: Filter[]): Promise<void> {
+    const isOverride = await StorageService.isSiteOverrideActive(hostname);
+    if (isOverride) {
+      await StorageService.setSiteFilters(hostname, filters);
+    } else {
+      await StorageService.setCurrentFilters(filters);
+    }
+  }
+
+  static async getEffectivePreset(hostname: string): Promise<string | null> {
+    const isOverride = await StorageService.isSiteOverrideActive(hostname);
+    if (isOverride) {
+      const sitePreset = await StorageService.getSitePreset(hostname);
+      if (sitePreset) return sitePreset;
+    }
+    return StorageService.getSelectedPreset();
+  }
+
+  static async setEffectivePreset(hostname: string, name: string): Promise<void> {
+    const isOverride = await StorageService.isSiteOverrideActive(hostname);
+    if (isOverride) {
+      await StorageService.setSitePreset(hostname, name);
+    } else {
+      await StorageService.setSelectedPreset(name);
+    }
+  }
+
+  static async getGlobalVolume(): Promise<number> {
+    const data = await chrome.storage.local.get("globalVolume");
+    return typeof data.globalVolume === "number" ? data.globalVolume : 1.0;
+  }
+
+  static async setGlobalVolume(volume: number): Promise<void> {
+    await chrome.storage.local.set({ globalVolume: volume });
+  }
+
+  static async getEffectiveVolume(hostname: string): Promise<number> {
+    const isOverride = await StorageService.isSiteOverrideActive(hostname);
+    if (isOverride) {
+      const data = await chrome.storage.local.get("siteVolumes");
+      const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
+      if (typeof siteVolumes[hostname] === "number") {
+        return siteVolumes[hostname];
+      }
+    }
+    return StorageService.getGlobalVolume();
+  }
+
+  static async setEffectiveVolume(hostname: string, volume: number): Promise<void> {
+    const isOverride = await StorageService.isSiteOverrideActive(hostname);
+    if (isOverride) {
+      await StorageService.setVolume(hostname, volume);
+    } else {
+      await StorageService.setGlobalVolume(volume);
+    }
+  }
 }
 
 export function normalizeFilters(filters: any[]): Filter[] {

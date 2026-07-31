@@ -101,8 +101,45 @@ const mediaObserver = new MutationObserver((mutations) => {
 mediaObserver.observe(document.body, { childList: true, subtree: true });
 
 
+function applyEffectiveFilters() {
+    chrome.storage.local.get(['currentFilters', 'siteFilters', 'siteOverrides'], (data) => {
+        const siteOverrides: Record<string, boolean> = (data.siteOverrides as Record<string, boolean>) || {};
+        const isOverride = Boolean(siteOverrides[currentHostname]);
+        if (isOverride) {
+            const siteFilters: Record<string, any[]> = (data.siteFilters as Record<string, any[]>) || {};
+            if (Array.isArray(siteFilters[currentHostname])) {
+                updateFilters(siteFilters[currentHostname]);
+                devLog('[content] Loaded siteFilters for:', currentHostname, siteFilters[currentHostname]);
+                return;
+            }
+        }
+        if (Array.isArray(data.currentFilters)) {
+            updateFilters(data.currentFilters);
+            devLog('[content] Loaded currentFilters from storage:', data.currentFilters);
+        }
+    });
+}
+
+function applyEffectiveVolume() {
+    chrome.storage.local.get(['globalVolume', 'siteVolumes', 'siteOverrides'], (data) => {
+        const siteOverrides: Record<string, boolean> = (data.siteOverrides as Record<string, boolean>) || {};
+        const isOverride = Boolean(siteOverrides[currentHostname]);
+        if (isOverride) {
+            const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
+            if (typeof siteVolumes[currentHostname] === 'number') {
+                updateVolume(siteVolumes[currentHostname]);
+                devLog('[content] Loaded siteVolume for:', currentHostname, siteVolumes[currentHostname]);
+                return;
+            }
+        }
+        const globalVolume = typeof data.globalVolume === 'number' ? data.globalVolume : 1.0;
+        updateVolume(globalVolume);
+        devLog('[content] Loaded globalVolume:', globalVolume);
+    });
+}
+
 // MARK: Initial load from storage
-chrome.storage.local.get(['eqEnabled', 'filterMode', 'blockList', 'allowList', 'currentFilters', 'siteVolumes'], (data) => {
+chrome.storage.local.get(['eqEnabled', 'filterMode', 'blockList', 'allowList'], (data) => {
     masterEqEnabled = !!data.eqEnabled;
     filterMode = data.filterMode === 'allowlist' ? 'allowlist' : 'blocklist';
     blockList = Array.isArray(data.blockList) ? data.blockList : [];
@@ -111,21 +148,9 @@ chrome.storage.local.get(['eqEnabled', 'filterMode', 'blockList', 'allowList', '
     effectiveEqEnabled = computeEffectiveEq();
     devLog('[content] effectiveEqEnabled state on load:', effectiveEqEnabled);
 
-    // Load currentFilters
-    if (Array.isArray(data.currentFilters)) {
-        updateFilters(data.currentFilters);
-        devLog('[content] Loaded currentFilters from storage:', data.currentFilters);
-    }
-
-    // Load site-specific volume
-    const siteVolumes: Record<string, number> = (data.siteVolumes as Record<string, number>) || {};
-    const volume = siteVolumes[currentHostname];
-    if (typeof volume === 'number') {
-        updateVolume(volume);
-        devLog('[content] Loaded site volume from storage:', volume);
-    } else {
-        updateVolume(1.0); // Default if not set
-    }
+    // Load effective filters and volume (site-specific if override active, else global)
+    applyEffectiveFilters();
+    applyEffectiveVolume();
 
     updateEQBtnVisual(eqBtn, effectiveEqEnabled);
     applyEQIfPlaying(effectiveEqEnabled);
@@ -167,23 +192,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
         updateStateAndApply();
     }
 
-    // Handle direct filter changes
-    if (changes.currentFilters) {
-        devLog('[content] currentFilters changed:', changes.currentFilters.newValue);
-        const newFilters = changes.currentFilters.newValue;
-        if (Array.isArray(newFilters)) {
-            updateFilters(newFilters);
-        }
+    // Handle filter or override changes
+    if (changes.currentFilters || changes.siteFilters || changes.siteOverrides) {
+        applyEffectiveFilters();
     }
 
-    // Handle site-specific volume changes
-    if (changes.siteVolumes) {
-        const newSiteVolumes: Record<string, number> = (changes.siteVolumes.newValue as Record<string, number>) || {};
-        const volume = newSiteVolumes[currentHostname];
-        if (typeof volume === 'number') {
-            devLog('[content] site volume changed:', volume);
-            updateVolume(volume);
-        }
+    // Handle volume or override changes
+    if (changes.globalVolume || changes.siteVolumes || changes.siteOverrides) {
+        applyEffectiveVolume();
     }
 });
 

@@ -540,15 +540,35 @@ button:focus-visible {
   height: 24px;
 }
 
-.current-site-label {
+button.current-site-label {
   color: #919191;
   background: #1a1a1a;
   padding: 4px 10px;
   border-radius: 6px;
-  max-width: 150px;
+  border: 1px solid transparent;
+  max-width: 500px;
+  height: 30px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+button.current-site-label.active {
+  background: rgba(250, 72, 111, 0.15);
+  color: #fa486f;
+  border-color: #fa486f;
+  box-shadow: 0 0 10px rgba(250, 72, 111, 0.25);
+  font-weight: 400;
 }
 
 

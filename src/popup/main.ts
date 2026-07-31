@@ -20,6 +20,7 @@ class PopupManager {
   private eqDropdownBtn!: HTMLButtonElement;
   private eqDropdownMenu!: HTMLDivElement;
   private toggleCurrentSiteBtn!: HTMLButtonElement;
+  private currentSiteBtn!: HTMLButtonElement;
 
   private presetsSelect!: HTMLSelectElement;
   private savePresetBtn!: HTMLButtonElement;
@@ -73,7 +74,7 @@ class PopupManager {
           <span class="app-version">v${version}</span>
         </div>
         <div class="top-panel-links">
-          <span id="current-site" class="current-site-label">Loading...</span>
+          <button id="current-site" type="button" class="current-site-label" title="Toggle site-specific equalizer">Loading...</button>
           <a href="https://github.com/ZDAVanO/web-equalizer" target="_blank" class="top-panel-link">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="20" width="20" fill="currentColor">
               <path fill-rule="evenodd" clip-rule="evenodd" d="M12.026 2c-5.509 0-9.974 4.465-9.974 9.974 0 4.406 2.857 8.145 6.821 9.465.499.09.679-.217.679-.481 0-.237-.008-.865-.011-1.696-2.775.602-3.361-1.338-3.361-1.338-.452-1.152-1.107-1.459-1.107-1.459-.905-.619.069-.605.069-.605 1.002.07 1.527 1.028 1.527 1.028.89 1.524 2.336 1.084 2.902.829.091-.645.351-1.085.635-1.334-2.214-.251-4.542-1.107-4.542-4.93 0-1.087.389-1.979 1.024-2.675-.101-.253-.446-1.268.099-2.64 0 0 .837-.269 2.742 1.021a9.582 9.582 0 0 1 2.496-.336 9.554 9.554 0 0 1 2.496.336c1.906-1.291 2.742-1.021 2.742-1.021.545 1.372.203 2.387.099 2.64.64.696 1.024 1.587 1.024 2.675 0 3.833-2.33 4.675-4.552 4.922.355.308.675.916.675 1.846 0 1.334-.012 2.41-.012 2.737 0 .267.178.577.687.479C19.146 20.115 22 16.379 22 11.974 22 6.465 17.535 2 12.026 2z"></path>
@@ -252,6 +253,9 @@ class PopupManager {
     this.toggleCurrentSiteBtn = document.getElementById(
       Constants.TOGGLE_CURRENT_SITE_BTN_ID
     ) as HTMLButtonElement;
+    this.currentSiteBtn = document.getElementById(
+      "current-site"
+    ) as HTMLButtonElement;
 
     this.presetsSelect = document.getElementById(
       Constants.PRESETS_SELECT_ID
@@ -345,6 +349,7 @@ class PopupManager {
 
   private initEventListeners() {
     this.eqToggle.addEventListener("click", () => this.toggleEq());
+    this.currentSiteBtn.addEventListener("click", () => this.toggleSiteOverride());
 
     // Split button dropdown toggle
     this.eqDropdownBtn.addEventListener("click", (e) => {
@@ -467,14 +472,14 @@ class PopupManager {
     this.userPresets = await StorageService.getUserPresets();
     this.updatePresetsSelector();
 
-    const selectedPreset = (await StorageService.getSelectedPreset()) || defaultPresets[0].name;
+    const selectedPreset = (await StorageService.getEffectivePreset(this.currentHostname)) || defaultPresets[0].name;
     this.presetsSelect.value = selectedPreset;
 
-    const savedFilters = await StorageService.getCurrentFilters();
+    const savedFilters = await StorageService.getEffectiveFilters(this.currentHostname);
     if (Array.isArray(savedFilters)) {
       this.peqEditor.setFilters(savedFilters);
     } else {
-      this.loadFiltersFromPreset(selectedPreset);
+      await this.loadFiltersFromPreset(selectedPreset);
     }
 
     this.eqEnabled = await StorageService.getEqEnabled();
@@ -485,7 +490,7 @@ class PopupManager {
     this.updateAllFilteringUI();
     this.updateDeleteButtonState();
 
-    const volume = await StorageService.getVolume(this.currentHostname);
+    const volume = await StorageService.getEffectiveVolume(this.currentHostname);
     const pos = Math.pow(volume / 6, 1 / 2.585);
     this.volumeSlider.value = pos.toString();
     this.volumeInput.value = volume.toFixed(2);
@@ -496,21 +501,96 @@ class PopupManager {
 
   private async updateCurrentSite() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const siteLabel = document.getElementById("current-site");
     if (tab?.url) {
       try {
         this.currentHostname = new URL(tab.url).hostname;
-        if (siteLabel) siteLabel.textContent = this.currentHostname;
       } catch (e) {
         this.currentHostname = "unknown";
-        if (siteLabel) siteLabel.textContent = "Browser page";
       }
+    }
+    await this.updateSiteOverrideUI();
+  }
+
+  private async toggleSiteOverride() {
+    if (!this.currentHostname || this.currentHostname === "unknown" || this.currentHostname === "Browser page") return;
+    const currentActive = await StorageService.isSiteOverrideActive(this.currentHostname);
+    const newActive = !currentActive;
+
+    if (newActive) {
+      // Snapshot current active state into site profile so there's no jump/reset
+      const currentFilters = this.peqEditor.getFilters();
+      const currentPreset = this.presetsSelect.value;
+      const currentVolume = 6 * Math.pow(parseFloat(this.volumeSlider.value), 2.585);
+
+      await StorageService.setSiteFilters(this.currentHostname, currentFilters);
+      await StorageService.setSitePreset(this.currentHostname, currentPreset);
+      await StorageService.setVolume(this.currentHostname, currentVolume);
+    }
+
+    await StorageService.setSiteOverrideActive(this.currentHostname, newActive);
+
+    await this.updateSiteOverrideUI(newActive);
+
+    const effectivePreset = (await StorageService.getEffectivePreset(this.currentHostname)) || defaultPresets[0].name;
+    this.presetsSelect.value = effectivePreset;
+
+    const effectiveFilters = await StorageService.getEffectiveFilters(this.currentHostname);
+    this.peqEditor.setFilters(effectiveFilters);
+
+    const effectiveVolume = await StorageService.getEffectiveVolume(this.currentHostname);
+    const pos = Math.pow(effectiveVolume / 6, 1 / 2.585);
+    this.volumeSlider.value = pos.toString();
+    this.volumeInput.value = effectiveVolume.toFixed(2);
+
+    this.updateDeleteButtonState();
+  }
+
+  private async updateSiteOverrideUI(active?: boolean) {
+    if (!this.currentSiteBtn) return;
+    const isBrowserPage = !this.currentHostname || this.currentHostname === "unknown" || this.currentHostname === "Browser page";
+    const domainDisplay = isBrowserPage ? "Browser page" : this.currentHostname;
+    const isOverride = isBrowserPage ? false : (active !== undefined ? active : await StorageService.isSiteOverrideActive(this.currentHostname));
+
+    this.currentSiteBtn.textContent = `Only for ${domainDisplay}`;
+    this.currentSiteBtn.classList.toggle("active", isOverride);
+    if (isOverride) {
+      this.currentSiteBtn.title = `Using custom equalizer profile for ${domainDisplay}. Click to switch back to global profile.`;
+    } else {
+      this.currentSiteBtn.title = `Using global equalizer profile. Click to enable custom profile for ${domainDisplay}.`;
     }
   }
 
   private async toggleEq() {
-    this.eqEnabled = !this.eqEnabled;
-    await StorageService.setEqEnabled(this.eqEnabled);
+    if (!this.currentHostname || this.currentHostname === "unknown" || this.currentHostname === "Browser page") {
+      this.eqEnabled = !this.eqEnabled;
+      await StorageService.setEqEnabled(this.eqEnabled);
+      this.updateAllFilteringUI();
+      return;
+    }
+
+    if (this.filterMode === "blocklist") {
+      const isBlocked = this.blockList.some((d) => matchesDomain(this.currentHostname, d));
+      if (isBlocked) {
+        this.blockList = this.blockList.filter((d) => !matchesDomain(this.currentHostname, d));
+      } else {
+        this.blockList.push(this.currentHostname);
+      }
+      await StorageService.setBlockList(this.blockList);
+    } else {
+      const isAllowed = this.allowList.some((d) => matchesDomain(this.currentHostname, d));
+      if (isAllowed) {
+        this.allowList = this.allowList.filter((d) => !matchesDomain(this.currentHostname, d));
+      } else {
+        this.allowList.push(this.currentHostname);
+      }
+      await StorageService.setAllowList(this.allowList);
+    }
+
+    if (!this.eqEnabled) {
+      this.eqEnabled = true;
+      await StorageService.setEqEnabled(true);
+    }
+
     this.updateAllFilteringUI();
   }
 
@@ -730,13 +810,13 @@ class PopupManager {
     this.presetsSelect.appendChild(defaultGroup);
   }
 
-  private loadFiltersFromPreset(presetName: string) {
+  private async loadFiltersFromPreset(presetName: string) {
     const allPresets = [...this.userPresets, ...localDevPresets, ...defaultPresets];
     const preset = allPresets.find((p) => p.name === presetName) || defaultPresets[0];
     const normalized = normalizeFilters(preset.filters);
     this.peqEditor.setFilters(normalized);
     this.updateDeleteButtonState();
-    StorageService.setCurrentFilters(normalized);
+    await StorageService.setEffectiveFilters(this.currentHostname, normalized);
   }
 
   private updateDeleteButtonState() {
@@ -745,10 +825,10 @@ class PopupManager {
     this.deletePresetBtn.disabled = !isUser || name === CUSTOM_PRESET_NAME;
   }
 
-  private handlePresetChange() {
+  private async handlePresetChange() {
     const name = this.presetsSelect.value;
-    StorageService.setSelectedPreset(name);
-    this.loadFiltersFromPreset(name);
+    await StorageService.setEffectivePreset(this.currentHostname, name);
+    await this.loadFiltersFromPreset(name);
   }
 
   private openPresetModal() {
@@ -772,7 +852,7 @@ class PopupManager {
 
     this.updatePresetsSelector();
     this.presetsSelect.value = name;
-    await StorageService.setSelectedPreset(name);
+    await StorageService.setEffectivePreset(this.currentHostname, name);
     this.presetModal.close();
     this.updateDeleteButtonState();
   }
@@ -788,18 +868,18 @@ class PopupManager {
 
     const nextPreset = defaultPresets[0].name;
     this.presetsSelect.value = nextPreset;
-    await StorageService.setSelectedPreset(nextPreset);
-    this.loadFiltersFromPreset(nextPreset);
+    await StorageService.setEffectivePreset(this.currentHostname, nextPreset);
+    await this.loadFiltersFromPreset(nextPreset);
   }
 
-  private onFiltersChanged(filters: Filter[]) {
-    StorageService.setCurrentFilters(filters);
-    this.autosavePreset(filters);
+  private async onFiltersChanged(filters: Filter[]) {
+    await StorageService.setEffectiveFilters(this.currentHostname, filters);
+    await this.autosavePreset(filters);
   }
 
-  private handleVolumeChanges(gain?: number) {
+  private async handleVolumeChanges(gain?: number) {
     const vol = gain !== undefined ? gain : 6 * Math.pow(parseFloat(this.volumeSlider.value), 2.585);
-    StorageService.setVolume(this.currentHostname, vol);
+    await StorageService.setEffectiveVolume(this.currentHostname, vol);
   }
 
   private async autosavePreset(filters: Filter[]) {
@@ -823,7 +903,7 @@ class PopupManager {
       await StorageService.setUserPresets(this.userPresets);
       this.updatePresetsSelector();
       this.presetsSelect.value = CUSTOM_PRESET_NAME;
-      await StorageService.setSelectedPreset(CUSTOM_PRESET_NAME);
+      await StorageService.setEffectivePreset(this.currentHostname, CUSTOM_PRESET_NAME);
     }
   }
 }

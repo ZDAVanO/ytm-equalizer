@@ -123,7 +123,7 @@ h1 {
   display: flex;
   align-items: center;
 
-  gap: 6px;
+  gap: 8px;
 }
 
 
@@ -155,24 +155,56 @@ button:focus-visible {
   padding: 0 14px;
 }
 
+.profile-site-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.profile-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Split Button & Dropdown */
 .split-btn-group {
   display: inline-flex;
   align-items: stretch;
   position: relative;
+  width: 206px;
+  flex: 0 0 206px;
+  box-sizing: border-box;
 }
 
 .split-btn-main {
+  flex: 1;
+  min-width: 0;
   height: 32px;
   box-sizing: border-box;
-  padding: 0 12px;
+  padding: 0 10px;
   border-top-right-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
   border-right: 1px solid #242424;
   transition: background 0.2s, border-color 0.25s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.eq-toggle-text {
+  font-size: 0.88em;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
 }
 
 .split-btn-arrow {
+  flex: 0 0 auto;
   height: 32px;
   box-sizing: border-box;
   border-top-left-radius: 0 !important;
@@ -565,7 +597,7 @@ button.current-site-label {
   padding: 4px 10px;
   border-radius: 8px;
   border: 1px solid transparent;
-  max-width: 180px;
+  max-width: 220px;
   height: 32px;
   box-sizing: border-box;
   display: inline-flex;
@@ -579,7 +611,8 @@ button.current-site-label {
   /* font-weight: 500; */
   cursor: pointer;
   outline: none;
-  margin-right: auto;
+  margin-left: auto;
+  margin-right: 0;
   transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
@@ -769,8 +802,8 @@ dialog::backdrop {
 }
 
 .peq-left-pane {
-  flex: 0 0 auto;
-  width: fit-content;
+  flex: 0 0 206px;
+  width: 206px;
   background: #1c1c1e;
   border: 1px solid #2c2c2e;
   border-radius: 12px;

@@ -97,6 +97,7 @@ class PopupManager {
                   <path d="M12 2v10" />
                   <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
                 </svg>
+                <span id="eq-toggle-text" class="eq-toggle-text">Equalizer OFF</span>
               </button>
               <button id="${Constants.EQ_DROPDOWN_BTN_ID}" type="button" class="split-btn-arrow" title="Filter Options">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -128,11 +129,14 @@ class PopupManager {
               </div>
             </div>
 
-            <button id="current-site" type="button" class="current-site-label" title="Toggle site-specific equalizer">Loading...</button>
-
-            <select id="${Constants.PRESETS_SELECT_ID}"></select>
-            <button id="${Constants.SAVE_PRESET_BTN_ID}" type="button">New</button>
-            <button id="${Constants.DELETE_PRESET_BTN_ID}" type="button">Delete</button>
+            <div class="profile-site-group">
+              <div class="profile-controls">
+                <select id="${Constants.PRESETS_SELECT_ID}"></select>
+                <button id="${Constants.SAVE_PRESET_BTN_ID}" type="button">New</button>
+                <button id="${Constants.DELETE_PRESET_BTN_ID}" type="button">Delete</button>
+              </div>
+              <button id="current-site" type="button" class="current-site-label" title="Toggle site-specific equalizer">Loading...</button>
+            </div>
           </div>
 
           <!-- Parametric Equalizer Dual-Pane Editor -->
@@ -702,12 +706,13 @@ class PopupManager {
     // Main split toggle visual
     this.eqToggle.classList.toggle("on", isSiteActive);
     this.eqDropdownBtn.classList.toggle("on", isSiteActive);
-    if (!this.eqEnabled) {
-      this.eqToggle.title = "Equalizer OFF";
-    } else if (!isSiteActive) {
-      this.eqToggle.title = "EQ OFF (Filtered)";
-    } else {
+    const eqToggleText = document.getElementById("eq-toggle-text");
+    if (isSiteActive) {
       this.eqToggle.title = "Equalizer ON";
+      if (eqToggleText) eqToggleText.textContent = "Equalizer ON";
+    } else {
+      this.eqToggle.title = !this.eqEnabled ? "Equalizer OFF" : "EQ OFF (Filtered)";
+      if (eqToggleText) eqToggleText.textContent = "Equalizer OFF";
     }
 
     // Radio inputs sync

@@ -75,6 +75,8 @@ export function updateVolume(volume: number) {
 export function applyEqualizer(ae_audioElement: HTMLMediaElement) {
     devLog('[applyEqualizer] element:', ae_audioElement);
 
+    if (!ae_audioElement) return;
+
     // AudioContext must be resumed after user gesture
     if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => devLog('[applyEqualizer] AudioContext resumed'));

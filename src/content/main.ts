@@ -87,12 +87,15 @@ const mediaObserver = new MutationObserver((mutations) => {
         mutation.addedNodes.forEach(node => {
             if (node instanceof HTMLMediaElement) {
                 devLog('[mediaObserver] New media element found:', node);
+                if (!node.crossOrigin) node.crossOrigin = 'anonymous';
                 if (effectiveEqEnabled) applyEqualizer(node);
             } else if (node instanceof HTMLElement) {
                 const media = node.querySelectorAll('audio, video');
                 media.forEach(m => {
                     devLog('[mediaObserver] New nested media found:', m);
-                    if (effectiveEqEnabled) applyEqualizer(m as HTMLMediaElement);
+                    const el = m as HTMLMediaElement;
+                    if (!el.crossOrigin) el.crossOrigin = 'anonymous';
+                    if (effectiveEqEnabled) applyEqualizer(el);
                 });
             }
         });
@@ -209,6 +212,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // MARK: Listen for play events
 document.addEventListener('play', function (e) {
     const target = e.target as HTMLMediaElement;
+    if (target && !target.crossOrigin) {
+        target.crossOrigin = 'anonymous';
+    }
     setLastPlayedElement(target);
     
     if (effectiveEqEnabled) {

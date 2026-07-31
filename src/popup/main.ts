@@ -4,7 +4,6 @@ import { version } from "../../package.json";
 import * as Constants from "@constants";
 import defaultPresets, { presetDisplayNames, localDevPresets } from "./defaultPresets";
 import { StorageService, matchesDomain, normalizeFilters } from "./services/StorageService";
-import { VolumeSlider } from "./components/VolumeSlider";
 import { ParametricEqEditor } from "./components/ParametricEqEditor";
 import { PopupVisualizer } from "./components/PopupVisualizer";
 import { FilterPreset, Filter, FilterMode } from "./types";
@@ -133,10 +132,6 @@ class PopupManager {
             <select id="${Constants.PRESETS_SELECT_ID}"></select>
             <button id="${Constants.SAVE_PRESET_BTN_ID}" type="button">New</button>
             <button id="${Constants.DELETE_PRESET_BTN_ID}" type="button">Delete</button>
-
-            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
-              ${VolumeSlider(Constants.VOLUME_SLIDER_ID, Constants.VOLUME_INPUT_ID)}
-            </div>
           </div>
 
           <!-- Parametric Equalizer Dual-Pane Editor -->
@@ -281,6 +276,13 @@ class PopupManager {
     this.presetNameInput = document.getElementById(
       Constants.PRESET_NAME_INPUT_ID
     ) as HTMLInputElement;
+
+    // Initialize Parametric Equalizer Component (which contains volume controls)
+    const peqContainer = document.getElementById("peq-editor-container")!;
+    this.peqEditor = new ParametricEqEditor(peqContainer, (filters) => {
+      this.onFiltersChanged(filters);
+    });
+
     this.volumeSlider = document.getElementById(
       Constants.VOLUME_SLIDER_ID
     ) as HTMLInputElement;
@@ -334,12 +336,6 @@ class PopupManager {
     this.allowlistCountSpan = document.getElementById(
       "allowlist-count"
     ) as HTMLSpanElement;
-
-    // Initialize Parametric Equalizer Component
-    const peqContainer = document.getElementById("peq-editor-container")!;
-    this.peqEditor = new ParametricEqEditor(peqContainer, (filters) => {
-      this.onFiltersChanged(filters);
-    });
 
     // Initialize Popup Visualizer (captures audio from the active tab via tabCapture)
     this.visualizer = new PopupVisualizer((analyser, captureError) => {
@@ -410,21 +406,35 @@ class PopupManager {
     this.modalSaveBtn.addEventListener("click", () => this.saveNewPreset());
 
     // Volume Events
+    const volumeText = document.getElementById("vol-value-text");
+
+    const updateVolumeUI = (gain: number) => {
+      if (volumeText) {
+        volumeText.textContent = `${gain.toFixed(2)}x`;
+      }
+      if (this.volumeInput) {
+        this.volumeInput.value = gain.toFixed(2);
+      }
+    };
+
     this.volumeSlider.oninput = () => {
       const pos = parseFloat(this.volumeSlider.value);
       const gain = 6 * Math.pow(pos, 2.585);
-      this.volumeInput.value = gain.toFixed(2);
+      updateVolumeUI(gain);
       this.handleVolumeChanges(gain);
     };
 
-    this.volumeInput.addEventListener("input", () => {
-      let gain = parseFloat(this.volumeInput.value);
-      if (isNaN(gain)) gain = 1.0;
-      gain = Math.max(0, Math.min(6, gain));
-      const pos = Math.pow(gain / 6, 1 / 2.585);
-      this.volumeSlider.value = pos.toString();
-      this.handleVolumeChanges(gain);
-    });
+    if (this.volumeInput) {
+      this.volumeInput.addEventListener("input", () => {
+        let gain = parseFloat(this.volumeInput!.value);
+        if (isNaN(gain)) gain = 1.0;
+        gain = Math.max(0, Math.min(6, gain));
+        const pos = Math.pow(gain / 6, 1 / 2.585);
+        this.volumeSlider.value = pos.toString();
+        updateVolumeUI(gain);
+        this.handleVolumeChanges(gain);
+      });
+    }
 
     const handleVolumeWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -434,20 +444,22 @@ class PopupManager {
       this.volumeSlider.value = pos.toString();
 
       const gain = 6 * Math.pow(pos, 2.585);
-      this.volumeInput.value = gain.toFixed(2);
+      updateVolumeUI(gain);
       this.handleVolumeChanges(gain);
     };
 
     this.volumeSlider.addEventListener("wheel", handleVolumeWheel);
-    this.volumeInput.addEventListener("wheel", handleVolumeWheel);
 
-    this.volumeResetBtn.addEventListener("click", () => {
+    const resetVolume = () => {
       const gain = 1.0;
       const pos = 0.5;
       this.volumeSlider.value = pos.toString();
-      this.volumeInput.value = gain.toFixed(2);
+      updateVolumeUI(gain);
       this.handleVolumeChanges(gain);
-    });
+    };
+
+    this.volumeResetBtn.addEventListener("click", resetVolume);
+    volumeText?.addEventListener("click", resetVolume);
 
     // Tab Switching Logic
     const tabBtns = document.querySelectorAll(".tab-btn");
@@ -493,7 +505,9 @@ class PopupManager {
     const volume = await StorageService.getEffectiveVolume(this.currentHostname);
     const pos = Math.pow(volume / 6, 1 / 2.585);
     this.volumeSlider.value = pos.toString();
-    this.volumeInput.value = volume.toFixed(2);
+    const volText = document.getElementById("vol-value-text");
+    if (volText) volText.textContent = `${volume.toFixed(2)}x`;
+    if (this.volumeInput) this.volumeInput.value = volume.toFixed(2);
 
     // Start audio capture for popup visualizer
     this.visualizer.start();
@@ -540,7 +554,9 @@ class PopupManager {
     const effectiveVolume = await StorageService.getEffectiveVolume(this.currentHostname);
     const pos = Math.pow(effectiveVolume / 6, 1 / 2.585);
     this.volumeSlider.value = pos.toString();
-    this.volumeInput.value = effectiveVolume.toFixed(2);
+    const volText = document.getElementById("vol-value-text");
+    if (volText) volText.textContent = `${effectiveVolume.toFixed(2)}x`;
+    if (this.volumeInput) this.volumeInput.value = effectiveVolume.toFixed(2);
 
     this.updateDeleteButtonState();
   }

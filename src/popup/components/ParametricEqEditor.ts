@@ -1,5 +1,7 @@
 import { Filter } from "../types";
 import { filterTypes, filterTypeShort, filterHasGain, filterHasQ, formatFrequency } from "../../filterTypes";
+import * as Constants from "@constants";
+import { VolumeSlider } from "./VolumeSlider";
 
 export class ParametricEqEditor {
   private container: HTMLElement;
@@ -140,6 +142,11 @@ export class ParametricEqEditor {
             <canvas id="peq-graph-canvas"></canvas>
             <div id="peq-handles-overlay" class="peq-handles-overlay"></div>
           </div>
+        </div>
+
+        <!-- Volume Pane: Vertical Volume Slider -->
+        <div class="peq-vol-pane">
+          ${VolumeSlider(Constants.VOLUME_SLIDER_ID, Constants.VOLUME_INPUT_ID)}
         </div>
       </div>
     `;
